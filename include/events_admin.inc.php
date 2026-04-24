@@ -62,3 +62,64 @@ function typetags_admin_prefilter($content)
 
   return str_replace($search, $replace, $content);
 }
+
+/**
+ * Inject per-tag color CSS on admin photo edit and batch manager pages
+ */
+function typetags_admin_photo()
+{
+  global $template, $page;
+
+  if (!in_array($page['page'], array('photo', 'batch_manager')))
+  {
+    return;
+  }
+
+  include_once(TYPETAGS_PATH . 'include/functions.inc.php');
+
+  $query = '
+SELECT
+    t.id,
+    tt.color
+  FROM ' . TYPETAGS_TABLE . ' AS tt
+    INNER JOIN ' . TAGS_TABLE . ' AS t
+    ON t.id_typetags = tt.id
+  WHERE t.id_typetags IS NOT NULL
+;';
+  $tags_color = query2array($query, 'id', 'color');
+
+  if (empty($tags_color))
+  {
+    return;
+  }
+
+  $css_rules = '';
+  foreach ($tags_color as $tag_id => $color)
+  {
+    $color_text = get_color_text($color);
+    $css_rules .= '.selectize-input .item[data-value="~~' . $tag_id . '~~"],'
+      . '.selectize-input .item.active[data-value="~~' . $tag_id . '~~"]'
+      . '{background-color:' . $color . ' !important;color:' . $color_text . ' !important;}'
+      . '.selectize-input .item[data-value="~~' . $tag_id . '~~"] .remove,'
+      . '.selectize-input .item.active[data-value="~~' . $tag_id . '~~"] .remove'
+      . '{color:' . $color_text . ' !important;}';
+  }
+
+  $template->assign('TYPETAGS_CSS', $css_rules);
+
+  if ($page['page'] == 'photo')
+  {
+    $template->set_prefilter('picture_modify', 'typetags_photo_prefilter');
+  }
+  else if ($page['page'] == 'batch_manager')
+  {
+    $template->set_prefilter('batch_manager_global', 'typetags_photo_prefilter');
+  }
+}
+
+function typetags_photo_prefilter($content)
+{
+  $css_block = '<style>{$TYPETAGS_CSS}</style>';
+  $content .= $css_block;
+  return $content;
+}
