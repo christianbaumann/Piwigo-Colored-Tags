@@ -67,13 +67,20 @@ SELECT
   {
     $ret = $tag_name;
   }
-  elseif (isset($pwg_loaded_plugins['ExtendedDescription']))
-  {
-    $ret = '[lang=all]<span style="color:' . $color . ';">[/lang]' . $tag_name . '[lang=all]</span>[/lang]';
-  }
   else
   {
-    $ret = '<span style="color:' . $color . ';">' . $tag_name . '</span>';
+    $color_text = get_color_text($color);
+    $style = 'background-color:' . $color . ';color:' . $color_text
+      . ';padding:2px 8px;border-radius:12px;display:inline-block;';
+
+    if (isset($pwg_loaded_plugins['ExtendedDescription']))
+    {
+      $ret = '[lang=all]<span style="' . $style . '">[/lang]' . $tag_name . '[lang=all]</span>[/lang]';
+    }
+    else
+    {
+      $ret = '<span style="' . $style . '">' . $tag_name . '</span>';
+    }
   }
 
   $typetags_cache['tags'][$tag_name] = $ret;
