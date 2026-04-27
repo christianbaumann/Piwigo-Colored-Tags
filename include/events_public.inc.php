@@ -122,6 +122,266 @@ SELECT
 }*/
 
 /**
+ * Prepare data for inline tag assignment on picture page
+ * triggered by 'loc_end_picture'
+ */
+function typetags_picture_tags()
+{
+  global $template, $page;
+
+  if (is_a_guest())
+  {
+    return;
+  }
+
+  $image_id = $page['image_id'];
+
+  // Get IDs of tags already assigned to this image
+  $query = '
+SELECT tag_id
+  FROM ' . IMAGE_TAG_TABLE . '
+  WHERE image_id = ' . (int)$image_id . '
+;';
+  $assigned_ids = query2array($query, null, 'tag_id');
+
+  // Get all colored tags with their colors
+  $query = '
+SELECT t.id, t.name, t.url_name, tt.color
+  FROM ' . TAGS_TABLE . ' AS t
+  INNER JOIN ' . TYPETAGS_TABLE . ' AS tt ON t.id_typetags = tt.id
+  ORDER BY t.name
+;';
+  $all_colored = query2array($query);
+
+  // Build unassigned list
+  $unassigned = array();
+  foreach ($all_colored as $tag)
+  {
+    if (!in_array($tag['id'], $assigned_ids))
+    {
+      $tag['color_text'] = get_color_text($tag['color']);
+      $unassigned[] = $tag;
+    }
+  }
+
+  // Build assigned colored tag ID set (for "x" buttons in JS)
+  $assigned_colored_ids = array();
+  foreach ($all_colored as $tag)
+  {
+    if (in_array($tag['id'], $assigned_ids))
+    {
+      $assigned_colored_ids[] = $tag['id'];
+    }
+  }
+
+  $template->assign(array(
+    'TYPETAGS_UNASSIGNED' => $unassigned,
+    'TYPETAGS_ASSIGNED_COLORED_IDS' => $assigned_colored_ids,
+    'TYPETAGS_IMAGE_ID' => $image_id,
+    'TYPETAGS_PWG_TOKEN' => get_pwg_token(),
+  ));
+
+  $template->set_prefilter('picture', 'typetags_picture_prefilter');
+}
+
+function typetags_picture_prefilter($content)
+{
+  // 1. Add data-tag-id attribute to tag links in #Tags section
+  $search = '<a href="{$tag.URL}">{$tag.name}</a>';
+  $replace = '<a href="{$tag.URL}" data-tag-id="{$tag.id}">{$tag.name}</a>';
+  $content = str_replace($search, $replace, $content);
+
+  // 2. Inject unassigned tags section after the info box </dl>
+  $injection = '
+{if isset($TYPETAGS_UNASSIGNED) && !empty($TYPETAGS_UNASSIGNED)}
+<div id="typetags-unassigned" style="margin:8px 0;line-height:2.2;">
+  {foreach from=$TYPETAGS_UNASSIGNED item=utag}
+  <span class="typetag-badge typetag-add" data-tag-id="{$utag.id}" data-tag-name="{$utag.name|escape}" data-tag-color="{$utag.color}" data-tag-color-text="{$utag.color_text}" style="background-color:{$utag.color};color:{$utag.color_text};padding:2px 8px;border-radius:12px;display:inline-block;cursor:pointer;opacity:0.6;margin:2px;" title="{\'Add tag\'|@translate}">+ {$utag.name}</span>
+  {/foreach}
+</div>
+{/if}
+';
+
+  $search_inject = '{if isset($metadata)}';
+  $content = str_replace($search_inject, $injection . $search_inject, $content);
+
+  // 3. Inject JavaScript via footer_script
+  $js = '
+{if isset($TYPETAGS_IMAGE_ID)}
+{footer_script require=\'jquery\'}
+;(function() {ldelim}
+  var imageId = {$TYPETAGS_IMAGE_ID};
+  var pwgToken = "{$TYPETAGS_PWG_TOKEN}";
+  var assignedColoredIds = [{foreach from=$TYPETAGS_ASSIGNED_COLORED_IDS item=tid name=tidloop}{$tid}{if !$smarty.foreach.tidloop.last},{/if}{/foreach}];
+
+  // Add "x" buttons inside assigned colored tag badges
+  jQuery("#Tags a[data-tag-id]").each(function() {ldelim}
+    var tagId = parseInt(jQuery(this).data("tag-id"));
+    if (assignedColoredIds.indexOf(tagId) !== -1) {ldelim}
+      jQuery(this).find("span[style]").append(\' <span class="typetag-remove" data-tag-id="\' + tagId + \'" style="cursor:pointer;font-size:0.8em;" title="{\'Remove tag\'|@translate}">&times;</span>\');
+    {rdelim}
+  {rdelim});
+
+  // Click: assign unassigned tag
+  jQuery(document).on("click", ".typetag-add", function() {ldelim}
+    var el = jQuery(this);
+    var tagId = el.data("tag-id");
+    var tagName = el.data("tag-name");
+    var tagColor = el.data("tag-color");
+    var tagColorText = el.data("tag-color-text");
+    el.css("pointer-events", "none");
+
+    jQuery.ajax({ldelim}
+      url: "ws.php?format=json",
+      type: "POST",
+      data: {ldelim}
+        method: "typetags.image.addTag",
+        image_id: imageId,
+        tag_id: tagId,
+        pwg_token: pwgToken
+      {rdelim},
+      dataType: "json",
+      success: function(data) {ldelim}
+        if (data.stat === "ok") {ldelim}
+          // Build assigned tag badge with "x" inside
+          var style = "background-color:" + tagColor + ";color:" + tagColorText + ";padding:2px 8px;border-radius:12px;display:inline-block;";
+          var removeBtn = \'<span class="typetag-remove" data-tag-id="\' + tagId + \'" style="cursor:pointer;font-size:0.8em;" title="{\'Remove tag\'|@translate}">&times;</span>\';
+          var badge = \'<span style="\' + style + \'">\' + tagName + \' \' + removeBtn + \'</span>\';
+          var link = \'<a href="#" data-tag-id="\' + tagId + \'">\' + badge + \'</a>\';
+
+          var tagsDD = jQuery("#Tags dd");
+          if (tagsDD.length === 0) {ldelim}
+            // Tags section doesn\'t exist yet, create it
+            var tagsDiv = \'<div id="Tags" class="imageInfo"><dt>{\'Tags\'|@translate}</dt><dd>\' + link + \'</dd></div>\';
+            // Insert before Albums or at end of dl#standard
+            var albums = jQuery("#Categories");
+            if (albums.length) {ldelim}
+              albums.before(tagsDiv);
+            {rdelim} else {ldelim}
+              jQuery("dl#standard").children().last().after(tagsDiv);
+            {rdelim}
+          {rdelim} else {ldelim}
+            // Append to existing tags
+            if (tagsDD.children().length > 0) {ldelim}
+              tagsDD.append(", ");
+            {rdelim}
+            tagsDD.append(link);
+            jQuery("#Tags").show();
+          {rdelim}
+
+          // Remove from unassigned list
+          el.remove();
+          assignedColoredIds.push(tagId);
+
+          // Hide unassigned section if empty
+          if (jQuery("#typetags-unassigned .typetag-add").length === 0) {ldelim}
+            jQuery("#typetags-unassigned").hide();
+          {rdelim}
+        {rdelim}
+      {rdelim},
+      error: function() {ldelim}
+        el.css("pointer-events", "");
+      {rdelim}
+    {rdelim});
+  {rdelim});
+
+  // Click: remove assigned tag
+  jQuery(document).on("click", ".typetag-remove", function(e) {ldelim}
+    e.preventDefault();
+    var el = jQuery(this);
+    var tagId = el.data("tag-id");
+    el.css("pointer-events", "none");
+
+    jQuery.ajax({ldelim}
+      url: "ws.php?format=json",
+      type: "POST",
+      data: {ldelim}
+        method: "typetags.image.removeTag",
+        image_id: imageId,
+        tag_id: tagId,
+        pwg_token: pwgToken
+      {rdelim},
+      dataType: "json",
+      success: function(data) {ldelim}
+        if (data.stat === "ok") {ldelim}
+          // Find the tag link (x button is now inside it)
+          var tagLink = el.closest("a[data-tag-id]");
+          var tagName = "";
+          var tagColor = "";
+          var tagColorText = "";
+
+          // Extract info from the badge span
+          var badgeSpan = tagLink.find("span[style]").first();
+          if (badgeSpan.length) {ldelim}
+            tagName = badgeSpan.clone().children().remove().end().text().trim();
+            var bgMatch = badgeSpan.attr("style").match(/background-color:\s*([^;]+)/);
+            var clMatch = badgeSpan.attr("style").match(/(?:^|;)\s*color:\s*([^;]+)/);
+            if (bgMatch) tagColor = bgMatch[1];
+            if (clMatch) tagColorText = clMatch[1];
+          {rdelim}
+
+          // Remove separator (", " before or after)
+          var prev = tagLink[0].previousSibling;
+          var next = tagLink[0].nextSibling;
+          if (next && next.nodeType === 3 && next.textContent.trim() === ",") {ldelim}
+            next.remove();
+          {rdelim} else if (prev && prev.nodeType === 3 && prev.textContent.match(/,\s*$/)) {ldelim}
+            prev.textContent = prev.textContent.replace(/,\s*$/, "");
+          {rdelim}
+
+          tagLink.remove();
+
+          // Remove from assigned list
+          var idx = assignedColoredIds.indexOf(tagId);
+          if (idx !== -1) assignedColoredIds.splice(idx, 1);
+
+          // Add back to unassigned list
+          if (tagName && tagColor) {ldelim}
+            var addStyle = "background-color:" + tagColor + ";color:" + tagColorText + ";padding:2px 8px;border-radius:12px;display:inline-block;cursor:pointer;opacity:0.6;margin:2px;";
+            var addBadge = \'<span class="typetag-badge typetag-add" data-tag-id="\' + tagId + \'" data-tag-name="\' + tagName + \'" data-tag-color="\' + tagColor + \'" data-tag-color-text="\' + tagColorText + \'" style="\' + addStyle + \'" title="{\'Add tag\'|@translate}">+ \' + tagName + \'</span>\';
+            var container = jQuery("#typetags-unassigned");
+            if (container.length === 0) {ldelim}
+              container = jQuery(\'<div id="typetags-unassigned" style="margin:8px 0;line-height:2.2;"></div>\');
+              jQuery("dl#standard").after(container);
+            {rdelim}
+            container.append(addBadge).show();
+          {rdelim}
+
+          // Hide Tags row if empty
+          if (jQuery("#Tags dd").children("a").length === 0) {ldelim}
+            jQuery("#Tags").hide();
+          {rdelim}
+        {rdelim}
+      {rdelim},
+      error: function() {ldelim}
+        el.css("pointer-events", "");
+      {rdelim}
+    {rdelim});
+  {rdelim});
+
+  // Hover effect on unassigned tags
+  jQuery(document).on("mouseenter", ".typetag-add", function() {ldelim}
+    jQuery(this).css("opacity", "1");
+  {rdelim}).on("mouseleave", ".typetag-add", function() {ldelim}
+    jQuery(this).css("opacity", "0.6");
+  {rdelim});
+{rdelim})();
+{/footer_script}
+{/if}
+';
+
+  // Only inject into the main picture template (prefilter runs on sub-templates too)
+  if (strpos($content, '{if isset($metadata)}') === false)
+  {
+    return $content;
+  }
+
+  $content .= $js;
+
+  return $content;
+}
+
+/**
  * colors tags on tags page
  */
 function typetags_tags()

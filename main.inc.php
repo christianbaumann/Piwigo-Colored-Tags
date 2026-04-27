@@ -34,11 +34,11 @@ include_once(TYPETAGS_PATH . 'include/functions.inc.php');
 $conf['TypeTags'] = safe_unserialize($conf['TypeTags']);
 
 
-// tags on picture page
-/*if (script_basename() == 'picture')
+// inline tag assignment on picture page
+if (script_basename() == 'picture')
 {
-  add_event_handler('loc_end_picture', 'typetags_picture');
-}*/
+  add_event_handler('loc_end_picture', 'typetags_picture_tags');
+}
 
 // tags everywhere
 if ($conf['TypeTags']['show_all'] and script_basename() != 'tags')
@@ -89,6 +89,28 @@ function typetags_add_methods($arr)
       ),
     'Create a tag color'
     );
+
+  $service->addMethod(
+    'typetags.image.addTag',
+    'ws_typetags_image_addTag',
+    array(
+      'image_id' => array('type' => WS_TYPE_ID),
+      'tag_id'   => array('type' => WS_TYPE_ID),
+      'pwg_token' => array(),
+    ),
+    'Assign a colored tag to an image'
+  );
+
+  $service->addMethod(
+    'typetags.image.removeTag',
+    'ws_typetags_image_removeTag',
+    array(
+      'image_id' => array('type' => WS_TYPE_ID),
+      'tag_id'   => array('type' => WS_TYPE_ID),
+      'pwg_token' => array(),
+    ),
+    'Remove a colored tag from an image'
+  );
 }
 
 
@@ -162,4 +184,85 @@ SELECT id
       return false;
     };
   }
+}
+
+function ws_typetags_image_addTag($params, &$service)
+{
+  if (is_a_guest())
+  {
+    return new PwgError(401, 'Access denied');
+  }
+
+  if (get_pwg_token() != $params['pwg_token'])
+  {
+    return new PwgError(403, 'Invalid security token');
+  }
+
+  // Verify tag is a colored tag
+  $query = '
+SELECT id FROM ' . TAGS_TABLE . '
+  WHERE id = ' . (int)$params['tag_id'] . '
+    AND id_typetags IS NOT NULL
+;';
+  if (!pwg_db_num_rows(pwg_query($query)))
+  {
+    return new PwgError(404, 'Tag not found or not a colored tag');
+  }
+
+  // Insert (ignore if already exists)
+  $query = '
+INSERT IGNORE INTO ' . IMAGE_TAG_TABLE . '
+  (image_id, tag_id)
+  VALUES (' . (int)$params['image_id'] . ', ' . (int)$params['tag_id'] . ')
+;';
+  pwg_query($query);
+
+  // Invalidate tag count cache
+  $query = '
+UPDATE ' . USER_CACHE_TABLE . '
+  SET nb_available_tags = NULL
+;';
+  pwg_query($query);
+
+  return true;
+}
+
+function ws_typetags_image_removeTag($params, &$service)
+{
+  if (is_a_guest())
+  {
+    return new PwgError(401, 'Access denied');
+  }
+
+  if (get_pwg_token() != $params['pwg_token'])
+  {
+    return new PwgError(403, 'Invalid security token');
+  }
+
+  // Verify tag is a colored tag
+  $query = '
+SELECT id FROM ' . TAGS_TABLE . '
+  WHERE id = ' . (int)$params['tag_id'] . '
+    AND id_typetags IS NOT NULL
+;';
+  if (!pwg_db_num_rows(pwg_query($query)))
+  {
+    return new PwgError(404, 'Tag not found or not a colored tag');
+  }
+
+  $query = '
+DELETE FROM ' . IMAGE_TAG_TABLE . '
+  WHERE image_id = ' . (int)$params['image_id'] . '
+    AND tag_id = ' . (int)$params['tag_id'] . '
+;';
+  pwg_query($query);
+
+  // Invalidate tag count cache
+  $query = '
+UPDATE ' . USER_CACHE_TABLE . '
+  SET nb_available_tags = NULL
+;';
+  pwg_query($query);
+
+  return true;
 }
