@@ -1,6 +1,9 @@
 <?php
 defined('TYPETAGS_PATH') or die('Hacking attempt!');
 
+define('TYPETAGS_TPL_TAG_ANCHOR', '<a href="{$tag.URL}">{$tag.name}</a>');
+define('TYPETAGS_TPL_INJECT_POINT', '{if isset($metadata)}');
+
 /**
  * triggered by 'render_tag_name'
  */
@@ -153,26 +156,9 @@ SELECT t.id, t.name, t.url_name, tt.color
 ;';
   $all_colored = query2array($query);
 
-  // Build unassigned list
-  $unassigned = array();
-  foreach ($all_colored as $tag)
-  {
-    if (!in_array($tag['id'], $assigned_ids))
-    {
-      $tag['color_text'] = get_color_text($tag['color']);
-      $unassigned[] = $tag;
-    }
-  }
-
-  // Build assigned colored tag ID set (for "x" buttons in JS)
-  $assigned_colored_ids = array();
-  foreach ($all_colored as $tag)
-  {
-    if (in_array($tag['id'], $assigned_ids))
-    {
-      $assigned_colored_ids[] = $tag['id'];
-    }
-  }
+  $partition = typetags_partition_tags($all_colored, $assigned_ids);
+  $unassigned = $partition['unassigned'];
+  $assigned_colored_ids = $partition['assigned_colored_ids'];
 
   $template->assign(array(
     'TYPETAGS_UNASSIGNED' => $unassigned,
@@ -187,9 +173,8 @@ SELECT t.id, t.name, t.url_name, tt.color
 function typetags_picture_prefilter($content)
 {
   // 1. Add data-tag-id attribute to tag links in #Tags section
-  $search = '<a href="{$tag.URL}">{$tag.name}</a>';
   $replace = '<a href="{$tag.URL}" data-tag-id="{$tag.id}">{$tag.name}</a>';
-  $content = str_replace($search, $replace, $content);
+  $content = str_replace(TYPETAGS_TPL_TAG_ANCHOR, $replace, $content);
 
   // 2. Inject unassigned tags section after the info box </dl>
   $injection = '
@@ -202,8 +187,7 @@ function typetags_picture_prefilter($content)
 {/if}
 ';
 
-  $search_inject = '{if isset($metadata)}';
-  $content = str_replace($search_inject, $injection . $search_inject, $content);
+  $content = str_replace(TYPETAGS_TPL_INJECT_POINT, $injection . TYPETAGS_TPL_INJECT_POINT, $content);
 
   // 3. Inject JavaScript via footer_script
   $js = '
@@ -277,6 +261,10 @@ function typetags_picture_prefilter($content)
           if (jQuery("#typetags-unassigned .typetag-add").length === 0) {ldelim}
             jQuery("#typetags-unassigned").hide();
           {rdelim}
+        {rdelim} else {ldelim}
+          // PwgError arrives as HTTP 200 + stat:"fail", so it lands here, not in error()
+          el.css("pointer-events", "");
+          if (window.console) { console.warn("typetags: " + (data.message || "request failed")); }
         {rdelim}
       {rdelim},
       error: function() {ldelim}
@@ -351,6 +339,10 @@ function typetags_picture_prefilter($content)
           if (jQuery("#Tags dd").children("a").length === 0) {ldelim}
             jQuery("#Tags").hide();
           {rdelim}
+        {rdelim} else {ldelim}
+          // PwgError arrives as HTTP 200 + stat:"fail", so it lands here, not in error()
+          el.css("pointer-events", "");
+          if (window.console) { console.warn("typetags: " + (data.message || "request failed")); }
         {rdelim}
       {rdelim},
       error: function() {ldelim}
@@ -371,7 +363,7 @@ function typetags_picture_prefilter($content)
 ';
 
   // Only inject into the main picture template (prefilter runs on sub-templates too)
-  if (strpos($content, '{if isset($metadata)}') === false)
+  if (strpos($content, TYPETAGS_TPL_INJECT_POINT) === false)
   {
     return $content;
   }

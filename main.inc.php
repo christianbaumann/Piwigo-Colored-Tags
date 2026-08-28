@@ -209,6 +209,16 @@ SELECT id FROM ' . TAGS_TABLE . '
     return new PwgError(404, 'Tag not found or not a colored tag');
   }
 
+  // Verify the image exists (INSERT IGNORE would otherwise create an orphan row)
+  $query = '
+SELECT id FROM ' . IMAGES_TABLE . '
+  WHERE id = ' . (int)$params['image_id'] . '
+;';
+  if (!pwg_db_num_rows(pwg_query($query)))
+  {
+    return new PwgError(404, 'Image not found');
+  }
+
   // Insert (ignore if already exists)
   $query = '
 INSERT IGNORE INTO ' . IMAGE_TAG_TABLE . '

@@ -3,3 +3,4 @@
 /test-results/
 /playwright-report/
 /.playwright-browsers/
+/.phpunit.result.cache

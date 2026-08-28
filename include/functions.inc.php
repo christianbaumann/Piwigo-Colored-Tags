@@ -8,6 +8,8 @@ function get_color_text($color)
     return '';
   }
 
+  $rgb = array();
+
   if (strlen($color) == 7)
   {
     $rgb[] = hexdec(substr($color, 1, 2))/255;
@@ -21,9 +23,45 @@ function get_color_text($color)
     $rgb[] = hexdec(substr($color, 3, 1))/15;
   }
 
+  if (empty($rgb))
+  {
+    return '#000';
+  }
+
   $l = (min($rgb) + max($rgb)) / 2;
 
   return $l > 0.45 ? '#000' : '#fff';
+}
+
+/**
+ * Split colored tags into unassigned (with contrast colour) and assigned ids.
+ *
+ * @param array $all_colored  rows of id, name, url_name, color
+ * @param array $assigned_ids tag ids assigned to the image (may include non-colored)
+ * @return array{unassigned: array, assigned_colored_ids: array}
+ */
+function typetags_partition_tags($all_colored, $assigned_ids)
+{
+  $unassigned = array();
+  $assigned_colored_ids = array();
+
+  foreach ($all_colored as $tag)
+  {
+    if (in_array($tag['id'], $assigned_ids))
+    {
+      $assigned_colored_ids[] = $tag['id'];
+    }
+    else
+    {
+      $tag['color_text'] = get_color_text($tag['color']);
+      $unassigned[] = $tag;
+    }
+  }
+
+  return array(
+    'unassigned' => $unassigned,
+    'assigned_colored_ids' => $assigned_colored_ids,
+    );
 }
 
 function check_color($hex)
