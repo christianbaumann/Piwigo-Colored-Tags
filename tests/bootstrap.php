@@ -11,3 +11,4 @@ require_once TYPETAGS_PATH . 'include/events_public.inc.php';
 require_once __DIR__ . '/Support/Config.php';
 require_once __DIR__ . '/Support/Db.php';
 require_once __DIR__ . '/Support/WsClient.php';
+require_once __DIR__ . '/Support/FixtureBuilder.php';

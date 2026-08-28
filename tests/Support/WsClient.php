@@ -43,6 +43,29 @@ class WsClient
         );
     }
 
+    /** Same call over GET, to characterise the absence of `post_only`. */
+    public function callGet(string $method, array $params = array()): array
+    {
+        $params['method'] = $method;
+
+        $ch = curl_init();
+        curl_setopt_array($ch, array(
+            CURLOPT_URL => Config::baseUrl() . '/ws.php?format=json&' . http_build_query($params),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_COOKIEJAR => $this->cookieFile,
+            CURLOPT_COOKIEFILE => $this->cookieFile,
+        ));
+        $body = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return array(
+            'http_code' => $httpCode,
+            'body' => $body,
+            'json' => json_decode($body, true),
+        );
+    }
+
     /** GET a gallery page, reusing this client's session (or as a guest). */
     public function fetchPage(string $path, bool $useCookies = true): array
     {
