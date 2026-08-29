@@ -8,6 +8,7 @@ require_once TYPETAGS_PATH . 'include/events_public.inc.php';
 
 // Integration-layer support classes (no Piwigo core needed — they talk to
 // ws.php over HTTP and to MariaDB directly).
+require_once __DIR__ . '/Support/TestUsers.php';
 require_once __DIR__ . '/Support/Config.php';
 require_once __DIR__ . '/Support/Db.php';
 require_once __DIR__ . '/Support/WsClient.php';
