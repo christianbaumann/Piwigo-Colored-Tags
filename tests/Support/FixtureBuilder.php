@@ -72,6 +72,27 @@ class FixtureBuilder
         return $ids;
     }
 
+    /**
+     * tag id => configured colour, straight from the table the plugin reads.
+     *
+     * Lets a test assert the colour the browser actually paints without a second,
+     * hand-typed copy of the palette going stale next to the real one.
+     */
+    public function coloredTagColors(): array
+    {
+        $result = $this->db->query('
+SELECT t.id, tt.color
+  FROM piwigo_tags AS t
+  INNER JOIN piwigo_typetags AS tt ON t.id_typetags = tt.id
+');
+        $colors = array();
+        while ($row = $result->fetch_assoc())
+        {
+            $colors[(int)$row['id']] = $row['color'];
+        }
+        return $colors;
+    }
+
     public function anyImageId(): int
     {
         return (int)$this->db->scalar('SELECT id FROM piwigo_images ORDER BY id LIMIT 1');
@@ -153,6 +174,32 @@ class FixtureBuilder
         return array('assigned' => $colored, 'unassigned' => array());
     }
 
+    /**
+     * Exactly one colored tag left unassigned.
+     *
+     * Differs from someAssignedSomeUnassigned in the case it covers, not just
+     * in its numbers: it is the only fixture from which assigning one more tag
+     * empties the unassigned list, which is the transition box 540 describes.
+     */
+    public function allButOneColoredAssigned(int $imageId): array
+    {
+        $colored = $this->coloredTagIds();
+        if (count($colored) < 2)
+        {
+            throw new RuntimeException('allButOneColoredAssigned needs at least 2 colored tags, found ' . count($colored));
+        }
+
+        $unassigned = array(array_pop($colored));
+        $assigned = $colored;
+
+        $this->recordImage($imageId);
+        $this->clearTags($imageId);
+        $this->assign($imageId, $assigned);
+        $this->assertState($imageId, $assigned);
+
+        return array('assigned' => $assigned, 'unassigned' => $unassigned);
+    }
+
     /** State C: no tags at all, so #Tags is absent from the rendered page. */
     public function imageWithNoTags(int $imageId): array
     {
@@ -224,6 +271,48 @@ class FixtureBuilder
             $ids[] = (int)$row[0];
         }
         return $ids;
+    }
+
+    // ── Cross-process state handoff ───────────────────────────────────────
+    //
+    // The E2E suite seeds from one short-lived CLI process and restores from a
+    // later one, so the recorded original state has to outlive the process that
+    // captured it. Exporting and re-importing keeps restore() as the single
+    // definition of how state is put back — the alternative was a second,
+    // independently written restore path in the seeding CLI.
+
+    public function exportState(): array
+    {
+        return array(
+            'assignments' => $this->originalAssignments,
+            'tag_counts' => $this->originalTagCounts,
+            'created_tag_ids' => $this->createdTagIds,
+            );
+    }
+
+    public function importState(array $state): void
+    {
+        // A JSON round trip turns integer array keys into strings; cast back so
+        // restore() writes the same values it would have written in-process.
+        $assignments = array();
+        foreach ($state['assignments'] ?? array() as $imageId => $tagIds)
+        {
+            $assignments[(int)$imageId] = array_map('intval', $tagIds);
+        }
+        $this->originalAssignments = $assignments;
+
+        $this->originalTagCounts = null;
+        if (isset($state['tag_counts']) and is_array($state['tag_counts']))
+        {
+            $counts = array();
+            foreach ($state['tag_counts'] as $userId => $count)
+            {
+                $counts[(int)$userId] = $count === null ? null : (int)$count;
+            }
+            $this->originalTagCounts = $counts;
+        }
+
+        $this->createdTagIds = array_map('intval', $state['created_tag_ids'] ?? array());
     }
 
     // ── Restore ───────────────────────────────────────────────────────────

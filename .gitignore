@@ -4,3 +4,4 @@
 /playwright-report/
 /.playwright-browsers/
 /.phpunit.result.cache
+/tests/e2e/.state/
