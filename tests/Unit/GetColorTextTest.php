@@ -81,7 +81,14 @@ final class GetColorTextTest extends TestCase
         // Reproduces the defect fixed in Phase 2 (plan Phase 2, item 1):
         // $rgb is never initialised for a length other than 4 or 7, so
         // min($rgb) throws TypeError.
-        foreach (array('#12345', '#', 'ab', str_repeat('a', 1000)) as $input)
+        //
+        // '#000000_overlong' is here because the mutation run of 2026-08-29 found
+        // the over-length inputs were not discriminating: `strlen($color) == 7`
+        // mutated to `>= 7` survived, since str_repeat('a', 1000) parses as a light
+        // colour under the mutant and returns '#000' anyway — the same answer the
+        // guard gives. This input reads as '#000000' under the mutant, so it returns
+        // '#fff' there and '#000' here, and the mutant dies.
+        foreach (array('#12345', '#', 'ab', str_repeat('a', 1000), '#000000_overlong') as $input)
         {
             $this->assertSame('#000', get_color_text($input), "input: $input");
         }
