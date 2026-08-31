@@ -70,7 +70,7 @@
               <input type="text" id="TypetagColor" size="7" maxlength="7" value="#444444">
             </div>
             <div class="typetags-create-actions">
-              <span id="TypetagsCreate" class="typetag-button icon-plus">Créer</span>
+              <span id="TypetagsCreate" class="typetag-button icon-plus">{'Create'|translate}</span>
               <span class="typetag-error icon-cancel"></span>
               <span class="typetag-message icon-ok">{'Color added'|translate}</span>
             </div>
