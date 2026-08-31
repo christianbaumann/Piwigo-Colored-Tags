@@ -63,6 +63,31 @@ class PicturePage {
   }
 
   /**
+   * The tooltip the injected footer script *declares* for a control it builds
+   * at runtime, read out of that script's own text.
+   *
+   * Neither obvious oracle works for these controls. Typing the translated
+   * string into a spec makes a second copy that rots, and reading the title off
+   * the element is the thing under test. The script source and the rendered
+   * attribute are two different artefacts, so comparing them witnesses the one
+   * step no lower layer can see: that the script carried its declaration into
+   * the DOM. Only <script> text is scanned, so a server-rendered control of the
+   * same class cannot answer for a JS-built one.
+   *
+   * @param {string} cssClass
+   * @returns {Promise<string|null>}
+   */
+  async declaredTooltip(cssClass) {
+    const scripts = await this.page.evaluate(() =>
+      Array.from(document.querySelectorAll('script'))
+        .map((s) => s.textContent || '')
+        .join('\n')
+    );
+    const match = scripts.match(new RegExp(`${cssClass}"[\\s\\S]{0,400}?title="([^"]+)"`));
+    return match ? match[1] : null;
+  }
+
+  /**
    * Whether #Tags sits before #Categories in document order.
    *
    * The add path creates the Tags row with albums.before(tagsDiv), so placement
