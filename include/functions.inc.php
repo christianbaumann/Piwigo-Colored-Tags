@@ -1,6 +1,12 @@
 <?php
 defined('TYPETAGS_PATH') or die('Hacking attempt!');
 
+/**
+ * Width of piwigo_typetags.name (maintain.class.php). The column is
+ * varchar(255) utf8mb3, so the bound is 255 characters, not bytes.
+ */
+define('TYPETAGS_NAME_MAX_LENGTH', 255);
+
 function get_color_text($color)
 {
   if (empty($color))

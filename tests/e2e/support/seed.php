@@ -15,6 +15,7 @@
  * Usage:
  *   php tests/e2e/support/seed.php --scenario=all-assigned --image=1
  *   php tests/e2e/support/seed.php --restore
+ *   php tests/e2e/support/seed.php --delete-typetag=<name>
  *
  * Both forms print one JSON object on stdout. Errors go to stderr with exit 1.
  *
@@ -85,6 +86,34 @@ function save_snapshot(array $state): void
 $args = parse_args($argv);
 $db = new Db();
 $builder = new FixtureBuilder($db);
+
+// ── Remove a colour a spec created through the UI ──────────────────────────
+
+/**
+ * The colour palette is not part of the snapshot: it is install configuration,
+ * not per-image state, so FixtureBuilder neither records nor restores it. A
+ * spec that creates a colour through the admin screen therefore has to take it
+ * back itself, and unconditionally - a spec killed mid-run would otherwise
+ * leave a stranger in the palette of every later run, where the colour panel's
+ * own specs count the options.
+ */
+if (isset($args['delete-typetag']))
+{
+    $name = $args['delete-typetag'];
+    if (!is_string($name) or $name === '')
+    {
+        fail('--delete-typetag needs a colour name');
+    }
+
+    $escaped = $db->escape($name);
+    $db->query("DELETE FROM piwigo_typetags WHERE name = '$escaped'");
+
+    echo json_encode(array(
+        'deleted_typetag' => $name,
+        'remaining' => (int)$db->scalar('SELECT COUNT(*) FROM piwigo_typetags'),
+        )), "\n";
+    exit(0);
+}
 
 // ── Restore ───────────────────────────────────────────────────────────────
 

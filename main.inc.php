@@ -87,8 +87,10 @@ function typetags_add_methods($arr)
       'typetag_name' => array(),
       'typetag_color' => array('info' => 'In format RRVVBB (Example : FF0000 for red)')
       ),
-    'Create a tag color'
-    );
+    'Create a tag color',
+    null,
+    array('admin_only'=>true)
+  );
 
   $service->addMethod(
     'typetags.image.addTag',
@@ -142,6 +144,15 @@ function ws_typetags_type_add($params, &$service)
 {
   $name = $params['typetag_name'];
   $color = '#' . $params['typetag_color'];
+
+  // mb_strlen, not strlen: the column counts characters, and a German name of
+  // 255 umlauts is 255 characters but more than 255 bytes. Without this the
+  // insert throws an uncaught mysqli_sql_exception and the stack trace is
+  // rendered into the response.
+  if (mb_strlen($name) > TYPETAGS_NAME_MAX_LENGTH)
+  {
+    return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid tag name'));
+  }
 
   // does the tag already exists?
   $query = '

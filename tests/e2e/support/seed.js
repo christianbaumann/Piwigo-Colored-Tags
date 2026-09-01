@@ -27,4 +27,20 @@ function restore() {
   execFileSync('php', [SEED_SCRIPT, '--restore'], { encoding: 'utf8' });
 }
 
-module.exports = { seed, restore };
+/**
+ * Remove a colour a spec created through the admin screen.
+ *
+ * Safe to call when nothing was created: the DELETE matches no row. Returns the
+ * palette size that remains, so a spec can assert the install came back to the
+ * count it started from rather than trusting the delete.
+ *
+ * @param {string} name
+ */
+function deleteTypetag(name) {
+  const stdout = execFileSync('php', [SEED_SCRIPT, `--delete-typetag=${name}`], {
+    encoding: 'utf8',
+  });
+  return JSON.parse(stdout);
+}
+
+module.exports = { seed, restore, deleteTypetag };

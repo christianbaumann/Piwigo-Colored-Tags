@@ -30,6 +30,22 @@ class AdminTagsPage {
     this.colorPanel = page.locator('#TypetagsOption');
     this.createButton = page.locator('#TypetagsCreate');
     this.removeColorLabel = page.locator('.color-option[data-id="n"] .color-name');
+
+    // The "Add a new color" form inside the same panel (tags.tpl:59-77).
+    this.newColorName = page.locator('#TypetagName');
+    this.newColorHex = page.locator('#TypetagColor');
+    this.createSuccessMessage = page.locator('.typetags-create-actions .typetag-message');
+    this.createError = page.locator('.typetags-create-actions .typetag-error');
+
+    // Every swatch in the palette, including the "Remove color" pseudo-option.
+    // addColorOption() appends a clone of it, so a colour created in the
+    // browser is one more of these and nothing else on the page changes.
+    this.colorOptions = page.locator('.color-option-container .color-option');
+  }
+
+  /** The swatch a created colour produces, addressed by the id the server returned. */
+  colorOption(/** @type {number|string} */ id) {
+    return this.page.locator(`.color-option-container .color-option[data-id="${id}"]`);
   }
 
   async open() {
@@ -52,6 +68,28 @@ class AdminTagsPage {
   async openColorPanel() {
     await this.colorButton.click();
     await this.colorPanel.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * Fill the two fields and press Create.
+   *
+   * The hex goes in with its leading hash, the way the field ships it
+   * (tags.tpl:70, value="#444444"); tags.js:141 strips it before the call.
+   *
+   * @param {string} name
+   * @param {string} hexWithHash
+   */
+  async createColor(name, hexWithHash) {
+    await this.newColorName.fill(name);
+    await this.newColorHex.fill(hexWithHash);
+    await this.createButton.click();
+  }
+
+  /** The full documented path to the panel: selection mode, a tag, the button. */
+  async walkToColorPanel() {
+    await this.enterSelectionMode();
+    await this.selectFirstTag();
+    await this.openColorPanel();
   }
 
   /**
