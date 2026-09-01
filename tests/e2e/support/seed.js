@@ -12,7 +12,7 @@ const SEED_SCRIPT = path.join(__dirname, 'seed.php');
  * object is what a spec should assert against — not a shape guessed from the
  * scenario name.
  *
- * @param {'some-assigned'|'all-assigned'|'all-but-one-assigned'|'no-tags'|'only-non-colored'} scenario
+ * @param {'some-assigned'|'all-assigned'|'all-but-one-assigned'|'no-tags'|'only-non-colored'|'colored-and-plain'} scenario
  * @param {number} imageId
  */
 function seed(scenario, imageId = 1) {

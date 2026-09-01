@@ -33,6 +33,7 @@ const SCENARIOS = array(
     'all-but-one-assigned' => 'allButOneColoredAssigned',
     'no-tags' => 'imageWithNoTags',
     'only-non-colored' => 'onlyNonColoredTags',
+    'colored-and-plain' => 'oneColoredAndPlainAssigned',
     );
 
 function fail(string $message): never

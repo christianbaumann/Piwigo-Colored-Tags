@@ -206,6 +206,29 @@ class PicturePage {
     );
   }
 
+  /**
+   * Whether #typetags-unassigned sits after dl#standard closes, rather than
+   * nested inside it — the fact behind finding 7b of the 2026-09-01 handbook
+   * walkthrough (04-schlagworte.html). Proving order against the whole list
+   * also proves it against any one row inside it, including #Provenance when
+   * the provenance plugin renders one, with no dependency on that plugin's
+   * fixtures.
+   */
+  async unassignedBoxFollowsStandardInfoList() {
+    return this.page.evaluate(() => {
+      const dl = document.querySelector('dl#standard');
+      const box = document.querySelector('#typetags-unassigned');
+      if (!dl || !box) {
+        return null;
+      }
+      const rel = dl.compareDocumentPosition(box);
+      return {
+        following: !!(rel & Node.DOCUMENT_POSITION_FOLLOWING),
+        containedBy: !!(rel & Node.DOCUMENT_POSITION_CONTAINED_BY),
+      };
+    });
+  }
+
   /** True when #Tags exists in the DOM *and* is visible. */
   async tagsRowIsShown() {
     return (await this.tagsRow.count()) > 0 && (await this.tagsRow.isVisible());

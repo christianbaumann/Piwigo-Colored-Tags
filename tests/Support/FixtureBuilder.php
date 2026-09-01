@@ -223,6 +223,25 @@ SELECT t.id, tt.color
         return array('assigned' => array($plainTagId), 'unassigned' => $this->coloredTagIds());
     }
 
+    /** State E: one colored and one plain tag assigned together, so both share the Tags row. */
+    public function oneColoredAndPlainAssigned(int $imageId): array
+    {
+        $colored = $this->coloredTagIds();
+        if (count($colored) === 0)
+        {
+            throw new RuntimeException('oneColoredAndPlainAssigned needs at least 1 colored tag');
+        }
+        $plainTagId = $this->ensurePlainTagId();
+
+        $this->recordImage($imageId);
+        $this->clearTags($imageId);
+        $assigned = array($colored[0], $plainTagId);
+        $this->assign($imageId, $assigned);
+        $this->assertState($imageId, $assigned);
+
+        return array('assigned' => $assigned, 'unassigned' => array_slice($colored, 1));
+    }
+
     // ── Primitives ────────────────────────────────────────────────────────
 
     private function clearTags(int $imageId): void
