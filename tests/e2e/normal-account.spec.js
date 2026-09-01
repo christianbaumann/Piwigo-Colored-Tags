@@ -11,7 +11,7 @@ const { seed, restore } = require('./support/seed');
  * Decision 0005 opens colour assignment on the picture page to any logged-in
  * non-guest rather than to administrators: main.inc.php:191-199 and :242-250
  * gate on is_a_guest() plus the token, and declare no admin_only.
- * docs/handbuch/04-schlagworte.html builds a whole section on that - it tells
+ * handbuch/04-schlagworte.html builds a whole section on that - it tells
  * readers without administrator rights to add and remove coloured tags here.
  *
  * Every other spec in this suite runs as typetags_webmaster, which passes an

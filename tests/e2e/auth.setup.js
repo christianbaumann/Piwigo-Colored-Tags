@@ -45,7 +45,7 @@ setup('authenticate', async ({ page }) => {
  * The whole suite otherwise runs as a webmaster, which cannot witness the
  * permission this plugin deliberately grants: decision 0005 opens colour
  * assignment on the picture page to any logged-in non-guest rather than to
- * administrators, and docs/handbuch/04-schlagworte.html tells readers so. Only
+ * administrators, and handbuch/04-schlagworte.html tells readers so. Only
  * a normal account can prove it.
  */
 setup('authenticate as a normal account', async ({ page }) => {
