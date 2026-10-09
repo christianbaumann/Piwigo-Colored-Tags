@@ -88,6 +88,25 @@ class WsClient
         return array('http_code' => $httpCode, 'body' => $body);
     }
 
+    /** POST a form to a gallery page with this client's session. */
+    public function postPage(string $path, array $fields): array
+    {
+        $ch = curl_init();
+        curl_setopt_array($ch, array(
+            CURLOPT_URL => Config::baseUrl() . $path,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => 1,
+            CURLOPT_POSTFIELDS => http_build_query($fields),
+            CURLOPT_COOKIEJAR => $this->cookieFile,
+            CURLOPT_COOKIEFILE => $this->cookieFile,
+        ));
+        $body = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return array('http_code' => $httpCode, 'body' => $body);
+    }
+
     public function login(string $username, string $password): void
     {
         $res = $this->call('pwg.session.login', array('username' => $username, 'password' => $password));

@@ -41,6 +41,21 @@ CREATE TABLE IF NOT EXISTS `' . $this->table . '` (
 ) DEFAULT CHARSET=utf8
 ;';
     pwg_query($query);
+
+    // emoji holds code points ("1F5BC FE0F"): the table is utf8mb3 and
+    // cannot store a four-byte character
+    $columns = array(
+      'striped' => 'TINYINT(1) NOT NULL DEFAULT 0',
+      'emoji' => 'VARCHAR(64) NOT NULL DEFAULT \'\'',
+      );
+    foreach ($columns as $column => $definition)
+    {
+      $result = pwg_query('SHOW COLUMNS FROM `' . $this->table . '` LIKE "' . $column . '";');
+      if (!pwg_db_num_rows($result))
+      {
+        pwg_query('ALTER TABLE `' . $this->table . '` ADD `' . $column . '` ' . $definition . ';');
+      }
+    }
   }
 
   function update($old_version, $new_version, &$errors=array())

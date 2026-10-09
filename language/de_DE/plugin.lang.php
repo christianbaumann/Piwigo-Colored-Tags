@@ -27,3 +27,8 @@ $lang['Set a different color for each tag'] = 'Eine unterschiedliche Farbe für 
 $lang['Set tags color'] = 'Schlagwort-Farben festlegen';
 $lang['This name is already used'] = 'Dieser Name wird bereits verwendet';
 $lang['Go to <a href="%s">plugin page</a> to edit colors'] = 'Gehen Sie zur <a href="%s">Plugin-Seite</a>, um Farben zu bearbeiten';
+$lang['Invalid emoji'] = 'Ungültiges Emoji';
+$lang['Striped'] = 'Gestreift';
+$lang['tab striped in the color and white, at the left edge'] = 'Streifen in der Farbe und Weiß am linken Rand';
+$lang['Emoji'] = 'Emoji';
+$lang['paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none'] = 'Emoji einfügen oder Code Points eingeben, z. B. 1F5BC FE0F; leer für keines';

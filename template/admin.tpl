@@ -17,10 +17,12 @@ jQuery('#colorpicker').farbtastic('#hexval');
     <legend>{'Edit color'|translate}</legend>
     <div class="edit-container">
       <div id="colorpicker"></div>
-      <p><b>{'Edit color'|translate} : <input type="text" readonly="readonly" size="18" style="background-color:{$typetag.OLD_COLOR};color:{$typetag.COLOR_TEXT};" value="{$typetag.OLD_NAME}"></b></p>
+      <p><b>{'Edit color'|translate} : <input type="text" readonly="readonly" size="18" style="{$typetag.OLD_COLORS}{if $typetag.OLD_STRIPED}padding-left:24px;{/if}" value="{if $typetag.OLD_EMOJI}{$typetag.OLD_EMOJI} {/if}{$typetag.OLD_NAME}"></b></p>
       <p>&nbsp;</p>
       <p>{'New name'|translate} : <input type="text" size="18" name="typetag_name" value="{$typetag.NAME}"></p>
       <p>{'New color'|translate} : <input type="text" id="hexval" name="typetag_color" size="7" maxlength="7" value="{$typetag.COLOR}"></p>
+      <p><label><input type="checkbox" name="typetag_striped" value="1"{if $typetag.STRIPED} checked="checked"{/if}> {'Striped'|translate}</label> <i>{'tab striped in the color and white, at the left edge'|translate}</i></p>
+      <p>{'Emoji'|translate} : <input type="text" size="18" name="typetag_emoji" value="{$typetag.EMOJI}"> <i>{'paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none'|translate}</i></p>
       <p>&nbsp;</p>
       <p>
         <input type="hidden" name="edited_typetag" value="{$edited_typetag}">
@@ -35,6 +37,8 @@ jQuery('#colorpicker').farbtastic('#hexval');
       <p>&nbsp;</p>
       <p>{'Name'|translate} : <input type="text" size="18" name="typetag_name" value="{if isset($typetag.NAME)}{$typetag.NAME}{/if}"></p>
       <p>{'Color'|translate} : <input type="text" id="hexval" name="typetag_color" size="7" maxlength="7" value="{if isset($typetag.COLOR)}{$typetag.COLOR}{else}#444444{/if}"></p>
+      <p><label><input type="checkbox" name="typetag_striped" value="1"{if !empty($typetag.STRIPED)} checked="checked"{/if}> {'Striped'|translate}</label> <i>{'tab striped in the color and white, at the left edge'|translate}</i></p>
+      <p>{'Emoji'|translate} : <input type="text" size="18" name="typetag_emoji" value="{if isset($typetag.EMOJI)}{$typetag.EMOJI}{/if}"> <i>{'paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none'|translate}</i></p>
       <p>&nbsp;</p>
       <p>
         <input class="submit" type="submit" name="addtypetag" value="{'Add'|translate}">
@@ -50,12 +54,12 @@ jQuery('#colorpicker').farbtastic('#hexval');
 
   <ul class="tagSelection typetagSelection">
   {foreach from=$typetags item=typetag}
-    <li style="background-color:{$typetag.color};color:{$typetag.color_text};">
+    <li style="{$typetag.colors}{if $typetag.striped}padding-left:24px;{/if}">
       <span class="buttons">
         <a href="{$typetag.u_edit}" title="{'edit'|translate}"><img src="{$ROOT_URL}{$themeconf.admin_icon_dir}/edit_s.png" class="button" alt="{'edit'|translate}"></a>
         <a href="{$typetag.u_delete}" title="{'delete'|translate}" onclick="return confirm('{'Are you sure?'|translate}');"><img src="{$ROOT_URL}{$themeconf.admin_icon_dir}/delete.png" class="button" alt="{'delete'|translate}"></a>
       </span>
-      {$typetag.name}
+      {$typetag.label}
     </li>
   {/foreach}
   </ul>

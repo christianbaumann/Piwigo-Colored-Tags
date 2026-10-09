@@ -14,11 +14,14 @@ const SEED_SCRIPT = path.join(__dirname, 'seed.php');
  *
  * @param {'some-assigned'|'all-assigned'|'all-but-one-assigned'|'no-tags'|'only-non-colored'|'colored-and-plain'} scenario
  * @param {number} imageId
+ * @param {{stripedGroup?: boolean}} options stripedGroup adds a striped colour group with an emoji and one tag in it
  */
-function seed(scenario, imageId = 1) {
-  const stdout = execFileSync('php', [SEED_SCRIPT, `--scenario=${scenario}`, `--image=${imageId}`], {
-    encoding: 'utf8',
-  });
+function seed(scenario, imageId = 1, { stripedGroup = false } = {}) {
+  const args = [SEED_SCRIPT, `--scenario=${scenario}`, `--image=${imageId}`];
+  if (stripedGroup) {
+    args.push('--with-striped-group');
+  }
+  const stdout = execFileSync('php', args, { encoding: 'utf8' });
   return JSON.parse(stdout);
 }
 

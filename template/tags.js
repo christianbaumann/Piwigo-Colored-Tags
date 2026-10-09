@@ -19,7 +19,7 @@ async function updateTagColor(tagId) {
     let colorSample = $('.tag-box[data-id=' + tagId + '] .typetag-color-sample');
 
     if (!(tagId in tagColor)) // if the tag just created
-        tagColor[tagId] = { id_typetags: null, color: null }; // create an entry in tagColor
+        tagColor[tagId] = { id_typetags: null, color: null, swatch: null }; // create an entry in tagColor
 
     if (tagColor[tagId].id_typetags != null) {
         if (colorSample.length == 0) {
@@ -27,7 +27,7 @@ async function updateTagColor(tagId) {
             $('.tag-box[data-id=' + tagId + ']').prepend(colorSample);
         }
         colorSample.prop('title', typeOfTags[tagColor[tagId].id_typetags].name);
-        colorSample.css('background', tagColor[tagId].color);
+        colorSample.css('background', tagColor[tagId].swatch);
     } else if (colorSample.length = !0) {
         colorSample.remove();
     }
@@ -63,7 +63,7 @@ function showTypetagsPopin() {
         if (id in tagColor)
             tagNode.find('i').css('color', tagColor[id].color)
         else // if the tag just created
-            tagColor[id] = { id_typetags: null, color: null }; // create an entry in tagColor
+            tagColor[id] = { id_typetags: null, color: null, swatch: null }; // create an entry in tagColor
     }
 
     if (selectedForTypetags.length > numberDisplayed) {
@@ -119,6 +119,7 @@ $('#TypetagsValidate').click(() => {
         let typeTag = {
             id_typetags: (selectedTypeId == 0) ? null : selectedTypeId,
             color: (selectedTypeId == 0) ? null : typeOfTags[selectedTypeId].color,
+            swatch: (selectedTypeId == 0) ? null : typeOfTags[selectedTypeId].swatch,
         };
         selectedForTypetags.forEach(id => {
             tagColor[id] = typeTag;

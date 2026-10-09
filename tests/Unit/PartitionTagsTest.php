@@ -89,6 +89,26 @@ final class PartitionTagsTest extends TestCase
         $this->assertSame(2, $result['assigned_colored_ids'][0]);
     }
 
+    // [HAPPY] the picture page's "+" badge needs its style and emoji ready to render
+    public function testAStripedGroupWithAnEmojiGetsItsStyleAndEmoji(): void
+    {
+        $tag = $this->tag(1, 'a', '#d00000') + array('striped' => '1', 'emoji' => '270D');
+        $result = typetags_partition_tags(array($tag), array());
+
+        $this->assertSame(typetags_badge_style('#d00000', true), $result['unassigned'][0]['style']);
+        $this->assertSame(TYPETAGS_STRIPED_TEXT, $result['unassigned'][0]['color_text']);
+        $this->assertSame('&#x270D;', $result['unassigned'][0]['emoji_html']);
+    }
+
+    // [ECP] a row read without the new columns renders as before
+    public function testARowWithoutTheNewColumnsIsPlainAndHasNoEmoji(): void
+    {
+        $result = typetags_partition_tags(array($this->tag(1, 'a', '#000000')), array());
+
+        $this->assertSame(typetags_badge_style('#000000', false), $result['unassigned'][0]['style']);
+        $this->assertSame('', $result['unassigned'][0]['emoji_html']);
+    }
+
     public function testStringAndIntegerIdsBothMatch(): void
     {
         // Records the loose in_array() comparison: '5' and 5 both match.

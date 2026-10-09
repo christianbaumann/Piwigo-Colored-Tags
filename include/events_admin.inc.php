@@ -23,7 +23,9 @@ function typetags_admin()
 
   while ($row = pwg_db_fetch_assoc($result))
   {
-    $row['color_text'] = get_color_text($row['color']);
+    $row['color_text'] = typetags_text_color($row['color'], $row['striped']);
+    $row['swatch'] = typetags_swatch($row['color'], $row['striped']);
+    $row['emoji_html'] = typetags_emoji_html($row['emoji']);
     $template->append('typetags', $row);
   }
 
@@ -31,12 +33,20 @@ function typetags_admin()
 SELECT
     t.id,
     id_typetags,
-    color
+    color,
+    striped
   FROM ' . TAGS_TABLE . ' AS t
     LEFT JOIN ' . TYPETAGS_TABLE . ' AS tt
     ON t.id_typetags = tt.id
 ;';
-  $template->assign('tags_color', query2array($query, 'id'));
+  $tags_color = query2array($query, 'id');
+  foreach ($tags_color as &$tag_color)
+  {
+    $tag_color['swatch'] = $tag_color['color'] === null ? null : typetags_swatch($tag_color['color'], $tag_color['striped']);
+    unset($tag_color['striped']);
+  }
+  unset($tag_color);
+  $template->assign('tags_color', $tags_color);
 
   $template->append(
     'tag_manager_plugin_actions',
@@ -80,13 +90,15 @@ function typetags_admin_photo()
   $query = '
 SELECT
     t.id,
-    tt.color
+    tt.color,
+    tt.striped,
+    tt.emoji
   FROM ' . TYPETAGS_TABLE . ' AS tt
     INNER JOIN ' . TAGS_TABLE . ' AS t
     ON t.id_typetags = tt.id
   WHERE t.id_typetags IS NOT NULL
 ;';
-  $tags_color = query2array($query, 'id', 'color');
+  $tags_color = query2array($query, 'id');
 
   if (empty($tags_color))
   {
@@ -94,15 +106,9 @@ SELECT
   }
 
   $css_rules = '';
-  foreach ($tags_color as $tag_id => $color)
+  foreach ($tags_color as $tag_id => $group)
   {
-    $color_text = get_color_text($color);
-    $css_rules .= '.selectize-input .item[data-value="~~' . $tag_id . '~~"],'
-      . '.selectize-input .item.active[data-value="~~' . $tag_id . '~~"]'
-      . '{background-color:' . $color . ' !important;color:' . $color_text . ' !important;}'
-      . '.selectize-input .item[data-value="~~' . $tag_id . '~~"] .remove,'
-      . '.selectize-input .item.active[data-value="~~' . $tag_id . '~~"] .remove'
-      . '{color:' . $color_text . ' !important;}';
+    $css_rules .= typetags_chip_css($tag_id, $group['color'], $group['striped'], $group['emoji']);
   }
 
   $template->assign('TYPETAGS_CSS', $css_rules);

@@ -14,6 +14,7 @@
  *
  * Usage:
  *   php tests/e2e/support/seed.php --scenario=all-assigned --image=1
+ *   php tests/e2e/support/seed.php --scenario=no-tags --with-striped-group
  *   php tests/e2e/support/seed.php --restore
  *   php tests/e2e/support/seed.php --delete-typetag=<name>
  *
@@ -162,6 +163,9 @@ if ($existing !== null)
 // The web-service calls the specs make null nb_available_tags for every user.
 $builder->recordTagCounts();
 
+// Before the scenario, so the scenario counts the striped tag among the coloured ones.
+$stripedTagId = isset($args['with-striped-group']) ? $builder->createStripedGroup() : null;
+
 $method = SCENARIOS[$scenario];
 $result = $builder->$method($imageId);
 
@@ -173,6 +177,8 @@ $assignedColored = array_values(array_intersect($colored, $builder->assignedTagI
 // Both notations of each configured colour, so a spec can compare against what
 // the browser reports (getComputedStyle normalises hex to rgb()) without
 // re-typing the palette or converting it itself.
+// A striped group paints its colour into the tab and the border, not the background.
+$striped = $builder->stripedTagIds();
 $colors = array();
 foreach ($builder->coloredTagColors() as $tagId => $hex)
 {
@@ -180,6 +186,7 @@ foreach ($builder->coloredTagColors() as $tagId => $hex)
     $colors[$tagId] = array(
         'hex' => $hex,
         'rgb' => sprintf('rgb(%d, %d, %d)', $rgb[0], $rgb[1], $rgb[2]),
+        'striped' => in_array($tagId, $striped),
         );
 }
 
@@ -193,4 +200,5 @@ echo json_encode(array(
     'assigned_colored_count' => count($assignedColored),
     'unassigned_colored_count' => count($colored) - count($assignedColored),
     'colored_total' => count($colored),
+    'striped_tag_id' => $stripedTagId,
     )), "\n";

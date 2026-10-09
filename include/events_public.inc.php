@@ -24,10 +24,10 @@ function typetags_render($tag_name, $tag=array())
   if (!isset($typetags_cache['colors']))
   {
     $query = '
-SELECT id, color
+SELECT id, color, striped, emoji
   FROM ' . TYPETAGS_TABLE . '
 ;';
-    $typetags_cache['colors'] = query2array($query, 'id', 'color');
+    $typetags_cache['colors'] = query2array($query, 'id');
   }
 
   if (!isset($typetags_cache['color_of_tag']))
@@ -41,48 +41,49 @@ SELECT id, color
 SELECT
     t.id,
     t.name,
-    color
+    t.id_typetags
   FROM ' . TYPETAGS_TABLE . ' AS tt
     INNER JOIN ' . TAGS_TABLE . ' AS t ON t.id_typetags = tt.id
 ;';
     $rows = query2array($query);
     foreach ($rows as $row)
     {
-      $typetags_cache['color_of_tag']['by_id'][ $row['id'] ] = $row['color'];
-      $typetags_cache['color_of_tag']['by_name'][ $row['name'] ] = $row['color'];
+      $typetags_cache['color_of_tag']['by_id'][ $row['id'] ] = $row['id_typetags'];
+      $typetags_cache['color_of_tag']['by_name'][ $row['name'] ] = $row['id_typetags'];
     }
   }
 
   if (!empty($tag['id_typetags']))
   {
-    $color = $typetags_cache['colors'][ $tag['id_typetags'] ];
+    $group = $typetags_cache['colors'][ $tag['id_typetags'] ] ?? null;
   }
   elseif (isset($tag['id']))
   {
-    $color = $typetags_cache['color_of_tag']['by_id'][ $tag['id'] ] ?? null;
+    $group_id = $typetags_cache['color_of_tag']['by_id'][ $tag['id'] ] ?? null;
+    $group = $typetags_cache['colors'][ $group_id ] ?? null;
   }
   else
   {
-    $color = $typetags_cache['color_of_tag']['by_name'][ $tag_name ] ?? null;
+    $group_id = $typetags_cache['color_of_tag']['by_name'][ $tag_name ] ?? null;
+    $group = $typetags_cache['colors'][ $group_id ] ?? null;
   }
 
-  if ($color === null)
+  if ($group === null)
   {
     $ret = $tag_name;
   }
   else
   {
-    $color_text = get_color_text($color);
-    $style = 'background-color:' . $color . ';color:' . $color_text
-      . ';padding:2px 8px;border-radius:12px;display:inline-block;';
+    $style = typetags_badge_style($group['color'], $group['striped']);
+    $label = typetags_badge_label($tag_name, $group['emoji']);
 
     if (isset($pwg_loaded_plugins['ExtendedDescription']))
     {
-      $ret = '[lang=all]<span style="' . $style . '">[/lang]' . $tag_name . '[lang=all]</span>[/lang]';
+      $ret = '[lang=all]<span style="' . $style . '">[/lang]' . $label . '[lang=all]</span>[/lang]';
     }
     else
     {
-      $ret = '<span style="' . $style . '">' . $tag_name . '</span>';
+      $ret = '<span style="' . $style . '">' . $label . '</span>';
     }
   }
 
@@ -149,7 +150,7 @@ SELECT tag_id
 
   // Get all colored tags with their colors
   $query = '
-SELECT t.id, t.name, t.url_name, tt.color
+SELECT t.id, t.name, t.url_name, tt.color, tt.striped, tt.emoji
   FROM ' . TAGS_TABLE . ' AS t
   INNER JOIN ' . TYPETAGS_TABLE . ' AS tt ON t.id_typetags = tt.id
   ORDER BY t.name
@@ -181,7 +182,7 @@ function typetags_picture_prefilter($content)
 {if isset($TYPETAGS_UNASSIGNED) && !empty($TYPETAGS_UNASSIGNED)}
 <div id="typetags-unassigned" style="margin:8px 0;line-height:2.2;">
   {foreach from=$TYPETAGS_UNASSIGNED item=utag}
-  <span class="typetag-badge typetag-add" data-tag-id="{$utag.id}" data-tag-name="{$utag.name|escape}" data-tag-color="{$utag.color}" data-tag-color-text="{$utag.color_text}" style="background-color:{$utag.color};color:{$utag.color_text};padding:2px 8px;border-radius:12px;display:inline-block;cursor:pointer;opacity:0.6;margin:2px;" title="{\'Add tag\'|@translate}">+ {$utag.name}</span>
+  <span class="typetag-badge typetag-add" data-tag-id="{$utag.id}" data-tag-name="{$utag.name|escape}" data-tag-style="{$utag.style}" data-tag-emoji="{$utag.emoji_html}" style="{$utag.style}cursor:pointer;opacity:0.6;margin:2px;" title="{\'Add tag\'|@translate}">+ {if $utag.emoji_html}<span class="typetag-emoji">{$utag.emoji_html}</span> {/if}{$utag.name}</span>
   {/foreach}
 </div>
 {/if}
@@ -211,8 +212,8 @@ function typetags_picture_prefilter($content)
     var el = jQuery(this);
     var tagId = el.data("tag-id");
     var tagName = el.data("tag-name");
-    var tagColor = el.data("tag-color");
-    var tagColorText = el.data("tag-color-text");
+    var tagStyle = el.data("tag-style");
+    var tagEmoji = el.data("tag-emoji");
     el.css("pointer-events", "none");
 
     jQuery.ajax({ldelim}
@@ -228,9 +229,9 @@ function typetags_picture_prefilter($content)
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
           // Build assigned tag badge with "x" inside
-          var style = "background-color:" + tagColor + ";color:" + tagColorText + ";padding:2px 8px;border-radius:12px;display:inline-block;";
           var removeBtn = \'<span class="typetag-remove" data-tag-id="\' + tagId + \'" style="cursor:pointer;font-size:0.8em;" title="{\'Remove tag\'|@translate}">&times;</span>\';
-          var badge = \'<span style="\' + style + \'">\' + tagName + \' \' + removeBtn + \'</span>\';
+          var label = (tagEmoji ? \'<span class="typetag-emoji">\' + tagEmoji + \'</span> \' : "") + tagName;
+          var badge = \'<span style="\' + tagStyle + \'">\' + label + \' \' + removeBtn + \'</span>\';
           var link = \'<a href="#" data-tag-id="\' + tagId + \'">\' + badge + \'</a>\';
 
           var tagsDD = jQuery("#Tags dd");
@@ -295,17 +296,15 @@ function typetags_picture_prefilter($content)
           // Find the tag link (x button is now inside it)
           var tagLink = el.closest("a[data-tag-id]");
           var tagName = "";
-          var tagColor = "";
-          var tagColorText = "";
+          var tagStyle = "";
+          var tagEmoji = "";
 
-          // Extract info from the badge span
+          // The style of the badge span is the badge style; the emoji is its own element
           var badgeSpan = tagLink.find("span[style]").first();
           if (badgeSpan.length) {ldelim}
             tagName = badgeSpan.clone().children().remove().end().text().trim();
-            var bgMatch = badgeSpan.attr("style").match(/background-color:\s*([^;]+)/);
-            var clMatch = badgeSpan.attr("style").match(/(?:^|;)\s*color:\s*([^;]+)/);
-            if (bgMatch) tagColor = bgMatch[1];
-            if (clMatch) tagColorText = clMatch[1];
+            tagStyle = badgeSpan.attr("style");
+            tagEmoji = badgeSpan.children(".typetag-emoji").html() || "";
           {rdelim}
 
           // Remove separator (", " before or after)
@@ -324,9 +323,10 @@ function typetags_picture_prefilter($content)
           if (idx !== -1) assignedColoredIds.splice(idx, 1);
 
           // Add back to unassigned list
-          if (tagName && tagColor) {ldelim}
-            var addStyle = "background-color:" + tagColor + ";color:" + tagColorText + ";padding:2px 8px;border-radius:12px;display:inline-block;cursor:pointer;opacity:0.6;margin:2px;";
-            var addBadge = \'<span class="typetag-badge typetag-add" data-tag-id="\' + tagId + \'" data-tag-name="\' + tagName + \'" data-tag-color="\' + tagColor + \'" data-tag-color-text="\' + tagColorText + \'" style="\' + addStyle + \'" title="{\'Add tag\'|@translate}">+ \' + tagName + \'</span>\';
+          if (tagName && tagStyle) {ldelim}
+            var addStyle = tagStyle + "cursor:pointer;opacity:0.6;margin:2px;";
+            var addLabel = (tagEmoji ? \'<span class="typetag-emoji">\' + tagEmoji + \'</span> \' : "") + tagName;
+            var addBadge = \'<span class="typetag-badge typetag-add" data-tag-id="\' + tagId + \'" data-tag-name="\' + tagName + \'" data-tag-style="\' + tagStyle + \'" data-tag-emoji="\' + tagEmoji + \'" style="\' + addStyle + \'" title="{\'Add tag\'|@translate}">+ \' + addLabel + \'</span>\';
             var container = jQuery("#typetags-unassigned");
             if (container.length === 0) {ldelim}
               container = jQuery(\'<div id="typetags-unassigned" style="margin:8px 0;line-height:2.2;"></div>\');

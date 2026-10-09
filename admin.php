@@ -23,7 +23,7 @@ SELECT id
   FROM ' . TYPETAGS_TABLE . '
   WHERE
     name = "' . pwg_db_real_escape_string($_POST['typetag_name']) . '"
-    AND id != ' . $_POST['edited_typetag'] . '
+    AND id != ' . intval($_POST['edited_typetag']) . '
 ;';
 
     if (pwg_db_num_rows(pwg_query($query)))
@@ -34,16 +34,38 @@ SELECT id
     {
       $page['errors'][] = l10n('Invalid color');
     }
+    else if ( ($emoji = typetags_emoji_codepoints($_POST['typetag_emoji'] ?? '')) === false )
+    {
+      $page['errors'][] = l10n('Invalid emoji');
+    }
     else
     {
+      $edited_id = intval($_POST['edited_typetag']);
+      $query = '
+SELECT name
+  FROM ' . TYPETAGS_TABLE . '
+  WHERE id = ' . $edited_id . '
+;';
+      list($old_name) = pwg_db_fetch_row(pwg_query($query));
+
       $query = '
 UPDATE '.TYPETAGS_TABLE.'
   SET
     name = "' . pwg_db_real_escape_string($_POST['typetag_name']) . '",
-    color = "' . $color . '"
-  WHERE id = ' . $_POST['edited_typetag'] . '
+    color = "' . $color . '",
+    striped = ' . (empty($_POST['typetag_striped']) ? 0 : 1) . ',
+    emoji = "' . $emoji . '"
+  WHERE id = ' . $edited_id . '
 ;';
       pwg_query($query);
+
+      // the group name is part of a tag's keyword hierarchy in the image file
+      // the form shows the stored name, and core addslashes() $_POST (include/common.inc.php),
+      // so an unchanged name comes back with one more level of slashes
+      if ($old_name !== stripslashes($_POST['typetag_name']))
+      {
+        typetags_notify_regrouped_group($edited_id);
+      }
 
       $page['infos'][] = l10n('Color saved');
     }
@@ -55,6 +77,8 @@ UPDATE '.TYPETAGS_TABLE.'
       'id' => $_POST['edited_typetag'],
       'name' => $_POST['typetag_name'],
       'color' => $_POST['typetag_color'],
+      'striped' => !empty($_POST['typetag_striped']),
+      'emoji' => $_POST['typetag_emoji'] ?? '',
       );
   }
 }
@@ -64,6 +88,13 @@ UPDATE '.TYPETAGS_TABLE.'
 // +-----------------------------------------------------------------------+
 if (isset($_GET['deletetypetag']))
 {
+  $query = '
+SELECT id
+  FROM ' . TAGS_TABLE . '
+  WHERE id_typetags = ' . intval($_GET['deletetypetag']) . '
+;';
+  $regrouped_tag_ids = query2array($query, null, 'id');
+
   $query = '
 UPDATE ' . TAGS_TABLE . '
   SET id_typetags = NULL
@@ -80,6 +111,11 @@ DELETE FROM ' . TYPETAGS_TABLE . '
   if (pwg_db_changes())
   {
     $page['infos'][] = l10n('Color deleted');
+  }
+
+  if (count($regrouped_tag_ids))
+  {
+    trigger_notify('typetags_tags_regrouped', $regrouped_tag_ids);
   }
 }
 
@@ -112,16 +148,24 @@ SELECT id
     {
       $page['errors'][] = l10n('Invalid color');
     }
+    else if ( ($emoji = typetags_emoji_codepoints($_POST['typetag_emoji'] ?? '')) === false )
+    {
+      $page['errors'][] = l10n('Invalid emoji');
+    }
     else
     {
       $query = '
 INSERT INTO ' . TYPETAGS_TABLE . '(
     name,
-    color
+    color,
+    striped,
+    emoji
   )
   VALUES(
     "' . pwg_db_real_escape_string($_POST['typetag_name']) . '",
-    "' . $color . '"
+    "' . $color . '",
+    ' . (empty($_POST['typetag_striped']) ? 0 : 1) . ',
+    "' . $emoji . '"
   )
 ;';
       pwg_query($query);
@@ -135,6 +179,8 @@ INSERT INTO ' . TYPETAGS_TABLE . '(
     $template->assign('typetag', array(
       'NAME' => $_POST['typetag_name'],
       'COLOR' => $_POST['typetag_color'],
+      'STRIPED' => !empty($_POST['typetag_striped']),
+      'EMOJI' => $_POST['typetag_emoji'] ?? '',
       ));
   }
 }
@@ -166,7 +212,8 @@ $result = pwg_query($query);
 
 while ($row = pwg_db_fetch_assoc($result))
 {
-  $row['color_text'] = get_color_text($row['color']);
+  $row['colors'] = typetags_badge_colors($row['color'], $row['striped']);
+  $row['label'] = typetags_badge_label($row['name'], $row['emoji']);
   $row['u_edit'] = TYPETAGS_ADMIN . '&amp;edittypetag=' . $row['id'];
   $row['u_delete'] = TYPETAGS_ADMIN . '&amp;deletetypetag=' . $row['id'];
 
@@ -194,9 +241,13 @@ SELECT *
     'ID' => $row['id'],
     'OLD_NAME' => $row['name'],
     'OLD_COLOR' => $row['color'],
-    'COLOR_TEXT' => get_color_text($row['color']),
+    'OLD_COLORS' => typetags_badge_colors($row['color'], $row['striped']),
+    'OLD_EMOJI' => typetags_emoji_html($row['emoji']),
+    'OLD_STRIPED' => (bool)$row['striped'],
     'NAME' => isset($edited_typetag['name']) ? $edited_typetag['name'] : $row['name'],
     'COLOR'=> isset($edited_typetag['color']) ? $edited_typetag['color'] : $row['color'],
+    'STRIPED' => isset($edited_typetag['striped']) ? $edited_typetag['striped'] : (bool)$row['striped'],
+    'EMOJI' => isset($edited_typetag['emoji']) ? $edited_typetag['emoji'] : typetags_emoji_html($row['emoji']),
     ));
 
   $template->assign('IN_EDIT', true);

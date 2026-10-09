@@ -20,4 +20,10 @@ $lang['New color'] = 'New color';
 $lang['You must fill all fields (name and color)'] = 'You must fill all fields (name and color)';
 $lang['Go to <a href="%s">plugin page</a> to edit colors'] = 'Go to <a href="%s">plugin page</a> to edit colors';
 
+$lang['Invalid emoji'] = 'Invalid emoji';
+$lang['Striped'] = 'Striped';
+$lang['tab striped in the color and white, at the left edge'] = 'tab striped in the color and white, at the left edge';
+$lang['Emoji'] = 'Emoji';
+$lang['paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none'] = 'paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none';
+
 ?>

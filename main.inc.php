@@ -85,11 +85,37 @@ function typetags_add_methods($arr)
     'ws_typetags_type_add',
     array(
       'typetag_name' => array(),
-      'typetag_color' => array('info' => 'In format RRVVBB (Example : FF0000 for red)')
+      'typetag_color' => array('info' => 'In format RRVVBB (Example : FF0000 for red)'),
+      'striped' => array('default' => false, 'type' => WS_TYPE_BOOL),
+      'emoji' => array('default' => '', 'info' => 'The emoji, or its code points (Example : 1F5BC FE0F)'),
       ),
     'Create a tag color',
     null,
     array('admin_only'=>true)
+  );
+
+  $service->addMethod(
+    'typetags.type.list',
+    'ws_typetags_type_list',
+    array(),
+    'List the tag colors',
+    null,
+    array('admin_only'=>true)
+  );
+
+  $service->addMethod(
+    'typetags.type.update',
+    'ws_typetags_type_update',
+    array(
+      'typetag_id' => array('type' => WS_TYPE_ID),
+      'typetag_color' => array('default' => null, 'info' => 'In format RRVVBB (Example : FF0000 for red)'),
+      'striped' => array('default' => null, 'type' => WS_TYPE_BOOL),
+      'emoji' => array('default' => null, 'info' => 'The emoji, or its code points; empty for none'),
+      'pwg_token' => array(),
+      ),
+    'Change the color, stripes or emoji of a tag color. A parameter left out keeps its value.',
+    null,
+    array('admin_only'=>true, 'post_only'=>true)
   );
 
   $service->addMethod(
@@ -131,6 +157,8 @@ UPDATE ' . TAGS_TABLE . '
   WHERE id IN ('.implode(',', $params['tag_id']).')
 ;';
   pwg_query($query);
+
+  trigger_notify('typetags_tags_regrouped', $params['tag_id']);
 }
 
 /**
@@ -169,15 +197,18 @@ SELECT id
   {
     return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid color'));
   }
+  else if ( ($emoji = typetags_emoji_codepoints($params['emoji'])) === false )
+  {
+    return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid emoji'));
+  }
   else
   {
-    single_insert(
-      TYPETAGS_TABLE, 
-      array(
-        "name" => pwg_db_real_escape_string($name),
-        "color" => $color,
-      )
-    );
+    // not single_insert(): it writes '' as NULL, and "no emoji" is ''
+    $insert = '
+INSERT INTO ' . TYPETAGS_TABLE . ' (name, color, striped, emoji)
+  VALUES ("' . pwg_db_real_escape_string($name) . '", "' . $color . '", ' . ($params['striped'] ? 1 : 0) . ', "' . $emoji . '")
+;';
+    pwg_query($insert);
 
     $id = pwg_db_insert_id(IMAGES_TABLE);
 
@@ -186,8 +217,11 @@ SELECT id
       return array(
         'id' => $id,
         'color' => $color,
-        'color_text' => get_color_text($color),
+        'color_text' => typetags_text_color($color, $params['striped']),
+        'swatch' => typetags_swatch($color, $params['striped']),
         'name' => $name,
+        'striped' => (bool)$params['striped'],
+        'emoji' => $emoji,
       );
     } 
     else 
@@ -195,6 +229,81 @@ SELECT id
       return false;
     };
   }
+}
+
+/**
+ * API method
+ * List every tag color
+ */
+function ws_typetags_type_list($params, &$service)
+{
+  $query = '
+SELECT id, name, color, striped, emoji
+  FROM ' . TYPETAGS_TABLE . '
+  ORDER BY id
+;';
+  return array_map('typetags_group_answer', query2array($query));
+}
+
+/**
+ * API method
+ * Change the color, stripes or emoji of a tag color
+ * @param mixed[] $params
+ *    @option int typetag_id
+ *    @option string typetag_color (optional)
+ *    @option bool striped (optional)
+ *    @option string emoji (optional)
+ */
+function ws_typetags_type_update($params, &$service)
+{
+  if (get_pwg_token() != $params['pwg_token'])
+  {
+    return new PwgError(403, 'Invalid security token');
+  }
+
+  $query = '
+SELECT id, name, color, striped, emoji
+  FROM ' . TYPETAGS_TABLE . '
+  WHERE id = ' . (int)$params['typetag_id'] . '
+;';
+  $row = pwg_db_fetch_assoc(pwg_query($query));
+  if (empty($row))
+  {
+    return new PwgError(404, 'Tag color not found');
+  }
+
+  if (isset($params['typetag_color']))
+  {
+    if (($row['color'] = check_color($params['typetag_color'])) === false)
+    {
+      return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid color'));
+    }
+  }
+
+  if (isset($params['emoji']))
+  {
+    if (($row['emoji'] = typetags_emoji_codepoints($params['emoji'])) === false)
+    {
+      return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid emoji'));
+    }
+  }
+
+  if (isset($params['striped']))
+  {
+    $row['striped'] = $params['striped'] ? 1 : 0;
+  }
+
+  // not single_update(): it writes '' as NULL, and "no emoji" is ''
+  $query = '
+UPDATE ' . TYPETAGS_TABLE . '
+  SET color = "' . $row['color'] . '",
+    striped = ' . ($row['striped'] ? 1 : 0) . ',
+    emoji = "' . $row['emoji'] . '"
+  WHERE id = ' . (int)$row['id'] . '
+;';
+  pwg_query($query);
+
+  return typetags_group_answer($row);
 }
 
 function ws_typetags_image_addTag($params, &$service)

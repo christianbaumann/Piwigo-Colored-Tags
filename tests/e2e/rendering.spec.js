@@ -28,6 +28,22 @@ const MIN_BADGE_HEIGHT = 10;
 const BLACK = 'rgb(0, 0, 0)';
 const WHITE = 'rgb(255, 255, 255)';
 
+/**
+ * A plain group paints its colour as the background; a striped one paints it
+ * into the tab and the border, on white, with black text.
+ */
+function expectGroupColour(badge, expected) {
+  if (expected.striped) {
+    expect(badge.backgroundColor, `tag ${badge.tagId} background`).toBe(WHITE);
+    expect(badge.backgroundImage, `tag ${badge.tagId} tab`).toContain(expected.rgb);
+    expect(badge.borderColor, `tag ${badge.tagId} border`).toBe(expected.rgb);
+    expect(badge.color, `tag ${badge.tagId} text colour`).toBe(BLACK);
+  } else {
+    expect(badge.backgroundColor, `tag ${badge.tagId} background`).toBe(expected.rgb);
+    expect([BLACK, WHITE], `tag ${badge.tagId} text colour`).toContain(badge.color);
+  }
+}
+
 test.describe('on-screen rendering', () => {
   test.afterEach(async () => {
     restore();
@@ -49,8 +65,7 @@ test.describe('on-screen rendering', () => {
     for (const badge of painted) {
       const expected = fixture.colors[badge.tagId];
       expect(expected, `tag ${badge.tagId} is missing from the fixture palette`).toBeTruthy();
-      expect(badge.backgroundColor, `tag ${badge.tagId} background`).toBe(expected.rgb);
-      expect([BLACK, WHITE], `tag ${badge.tagId} text colour`).toContain(badge.color);
+      expectGroupColour(badge, expected);
       expect(badge.width, `tag ${badge.tagId} width`).toBeGreaterThan(MIN_BADGE_WIDTH);
       expect(badge.height, `tag ${badge.tagId} height`).toBeGreaterThan(MIN_BADGE_HEIGHT);
     }
@@ -70,8 +85,7 @@ test.describe('on-screen rendering', () => {
       const expected = fixture.colors[badge.tagId];
       expect(expected, `tag ${badge.tagId} is missing from the fixture palette`).toBeTruthy();
       expect(badge.badge, `tag ${badge.tagId} rendered no badge span`).toBe(true);
-      expect(badge.backgroundColor, `tag ${badge.tagId} background`).toBe(expected.rgb);
-      expect([BLACK, WHITE], `tag ${badge.tagId} text colour`).toContain(badge.color);
+      expectGroupColour(badge, expected);
       expect(badge.width, `tag ${badge.tagId} width`).toBeGreaterThan(MIN_BADGE_WIDTH);
       expect(badge.height, `tag ${badge.tagId} height`).toBeGreaterThan(MIN_BADGE_HEIGHT);
     }
@@ -102,6 +116,23 @@ test.describe('on-screen rendering', () => {
     const afterReload = (await picture.assignedBadgePaint()).find((b) => b.tagId === tagId);
     expect(afterReload.backgroundColor).toBe(painted.backgroundColor);
     expect(afterReload.color).toBe(painted.color);
+  });
+
+  test('a striped group paints the tab and border at real size', async ({ page }) => {
+    const fixture = seed('no-tags', 1, { stripedGroup: true });
+    const tagId = fixture.striped_tag_id;
+    expect(fixture.colors[tagId].striped).toBe(true);
+
+    const picture = new PicturePage(page);
+    await picture.gotoFixture(fixture);
+
+    const badge = (await picture.unassignedBadgePaint()).find((b) => b.tagId === tagId);
+    expect(badge, 'the striped tag has a badge').toBeTruthy();
+    expect(badge.backgroundImage).toMatch(/^repeating-linear-gradient\(45deg, /);
+    expectGroupColour(badge, fixture.colors[tagId]);
+    expect(badge.emoji).toBe('\u{270D}\u{FE0F}');
+    expect(badge.width).toBeGreaterThan(MIN_BADGE_WIDTH);
+    expect(badge.height).toBeGreaterThan(MIN_BADGE_HEIGHT);
   });
 
   test('the assignment UI initialises with no console or page errors', async ({ page }) => {

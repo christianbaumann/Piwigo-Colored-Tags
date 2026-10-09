@@ -20,6 +20,12 @@ class FixtureBuilder
     /** tag ids created by this builder, to be deleted on restore */
     private array $createdTagIds = array();
 
+    /** colour group ids created by this builder, deleted on restore after their tags */
+    private array $createdGroupIds = array();
+
+    public const STRIPED_GROUP_COLOR = '#d00000';
+    public const STRIPED_GROUP_EMOJI = '270D FE0F';
+
     public function __construct(Db $db)
     {
         $this->db = $db;
@@ -91,6 +97,49 @@ SELECT t.id, tt.color
             $colors[(int)$row['id']] = $row['color'];
         }
         return $colors;
+    }
+
+    /** ids of the tags whose colour group is striped */
+    public function stripedTagIds(): array
+    {
+        $result = $this->db->query('
+SELECT t.id
+  FROM piwigo_tags AS t
+  INNER JOIN piwigo_typetags AS tt ON t.id_typetags = tt.id
+  WHERE tt.striped = 1
+');
+        $ids = array();
+        while ($row = $result->fetch_row())
+        {
+            $ids[] = (int)$row[0];
+        }
+        return $ids;
+    }
+
+    /**
+     * A striped colour group with an emoji, and one tag in it. The installed
+     * palette may hold no striped group at all, so the specs for the striped
+     * look bring their own.
+     *
+     * @return int the tag's id
+     */
+    public function createStripedGroup(): int
+    {
+        $this->db->query("INSERT INTO piwigo_typetags (name, color, striped, emoji)
+            VALUES ('_fixture_striped_group', '" . self::STRIPED_GROUP_COLOR . "', 1, '" . self::STRIPED_GROUP_EMOJI . "')");
+        $groupId = $this->db->insertId();
+        $this->createdGroupIds[] = $groupId;
+
+        $this->db->query("INSERT INTO piwigo_tags (name, url_name, id_typetags)
+            VALUES ('_fixture_striped_tag', '_fixture_striped_tag', $groupId)");
+        $tagId = $this->db->insertId();
+        $this->createdTagIds[] = $tagId;
+
+        if (!in_array($tagId, $this->stripedTagIds()))
+        {
+            throw new RuntimeException("Fixture tag $tagId did not come out striped");
+        }
+        return $tagId;
     }
 
     public function anyImageId(): int
@@ -306,6 +355,7 @@ SELECT t.id, tt.color
             'assignments' => $this->originalAssignments,
             'tag_counts' => $this->originalTagCounts,
             'created_tag_ids' => $this->createdTagIds,
+            'created_group_ids' => $this->createdGroupIds,
             );
     }
 
@@ -332,6 +382,7 @@ SELECT t.id, tt.color
         }
 
         $this->createdTagIds = array_map('intval', $state['created_tag_ids'] ?? array());
+        $this->createdGroupIds = array_map('intval', $state['created_group_ids'] ?? array());
     }
 
     // ── Restore ───────────────────────────────────────────────────────────
@@ -361,5 +412,11 @@ SELECT t.id, tt.color
             $this->db->query("DELETE FROM piwigo_tags WHERE id = $tagId");
         }
         $this->createdTagIds = array();
+
+        foreach ($this->createdGroupIds as $groupId)
+        {
+            $this->db->query("DELETE FROM piwigo_typetags WHERE id = $groupId");
+        }
+        $this->createdGroupIds = array();
     }
 }

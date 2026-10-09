@@ -174,7 +174,10 @@ class PicturePage {
         return {
           tagId: Number(span.getAttribute('data-tag-id')),
           backgroundColor: style.backgroundColor,
+          backgroundImage: style.backgroundImage,
+          borderColor: style.borderLeftColor,
           color: style.color,
+          emoji: span.querySelector('.typetag-emoji')?.textContent ?? null,
           width: box.width,
           height: box.height,
         };
@@ -198,7 +201,10 @@ class PicturePage {
           tagId: Number(anchor.getAttribute('data-tag-id')),
           badge: true,
           backgroundColor: style.backgroundColor,
+          backgroundImage: style.backgroundImage,
+          borderColor: style.borderLeftColor,
           color: style.color,
+          emoji: badge.querySelector('.typetag-emoji')?.textContent ?? null,
           width: box.width,
           height: box.height,
         };

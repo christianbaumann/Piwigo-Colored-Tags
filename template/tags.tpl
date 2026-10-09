@@ -45,11 +45,11 @@
         {foreach from=$typetags item=typetag}
           <div class="color-option" data-id={$typetag.id} data-color="{$typetag.color}" title="{$typetag.color}">
               <input type="radio" id="tag-color-{$typetag.id}" value={$typetag.id} name="typetags" style="display: none;">
-              <label for="tag-color-{$typetag.id}" style="border-color:{$typetag.color};background:{$typetag.color}">
-                  <span class="color-sample" style="background:{$typetag.color}">
+              <label for="tag-color-{$typetag.id}" style="border-color:{$typetag.color};background:{if $typetag.striped}#fff{else}{$typetag.color}{/if}">
+                  <span class="color-sample" style="background:{$typetag.swatch}">
                     <i class="icon-ok" style="color:{$typetag.color}"></i>
                   </span>
-                  <span class="color-name" style="color:{$typetag.color_text}">{$typetag.name}</span>
+                  <span class="color-name" style="color:{$typetag.color_text}">{if $typetag.emoji_html}{$typetag.emoji_html} {/if}{$typetag.name}</span>
               </label>
           </div>
         {/foreach}
