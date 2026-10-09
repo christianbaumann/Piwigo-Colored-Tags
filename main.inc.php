@@ -139,6 +139,19 @@ function typetags_add_methods($arr)
     ),
     'Remove a colored tag from an image'
   );
+
+  $service->addMethod(
+    'typetags.image.addNewTag',
+    'ws_typetags_image_addNewTag',
+    array(
+      'image_id' => array('type' => WS_TYPE_ID),
+      'tag_name' => array('info' => 'Created when no tag has this name, otherwise that tag is assigned'),
+      'pwg_token' => array(),
+    ),
+    'Assign a tag to an image by its name, creating it when it is new',
+    null,
+    array('post_only' => true)
+  );
 }
 
 
@@ -355,6 +368,123 @@ UPDATE ' . USER_CACHE_TABLE . '
   pwg_query($query);
 
   return true;
+}
+
+/**
+ * API method
+ * Assign a tag typed on the picture page, creating it when the name is new
+ * @param mixed[] $params
+ *    @option int image_id
+ *    @option string tag_name
+ */
+function ws_typetags_image_addNewTag($params, &$service)
+{
+  if (is_a_guest())
+  {
+    return new PwgError(401, 'Access denied');
+  }
+
+  if (get_pwg_token() != $params['pwg_token'])
+  {
+    return new PwgError(403, 'Invalid security token');
+  }
+
+  // Cleaned as core cleans a name typed into its tag fields (get_tag_ids()).
+  $name = trim(strip_tags(stripslashes($params['tag_name'])));
+  if (!typetags_typed_tag_name_is_valid($name))
+  {
+    return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid tag name'));
+  }
+
+  $query = '
+SELECT id FROM ' . IMAGES_TABLE . '
+  WHERE id = ' . (int)$params['image_id'] . '
+;';
+  if (!pwg_db_num_rows(pwg_query($query)))
+  {
+    return new PwgError(404, 'Image not found');
+  }
+
+  include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
+
+  list($max_tag_id) = pwg_db_fetch_row(pwg_query('SELECT MAX(id) FROM ' . TAGS_TABLE . ';'));
+  $tag_id = (int)tag_id_from_tag_name(pwg_db_real_escape_string($name));
+
+  $query = '
+INSERT IGNORE INTO ' . IMAGE_TAG_TABLE . '
+  (image_id, tag_id)
+  VALUES (' . (int)$params['image_id'] . ', ' . $tag_id . ')
+;';
+  pwg_query($query);
+
+  $query = '
+UPDATE ' . USER_CACHE_TABLE . '
+  SET nb_available_tags = NULL
+;';
+  pwg_query($query);
+
+  $query = '
+SELECT name FROM ' . TAGS_TABLE . '
+  WHERE id = ' . $tag_id . '
+;';
+  list($stored_name) = pwg_db_fetch_row(pwg_query($query));
+
+  return array_merge(
+    array(
+      'tag_id' => $tag_id,
+      'name' => $stored_name,
+      'created' => $tag_id > (int)$max_tag_id,
+      ),
+    typetags_tag_badge($tag_id)
+    );
+}
+
+/**
+ * Whether a name typed by any logged-in account may become a tag. Refused:
+ * - characters that could end an HTML attribute or open a tag, and control
+ *   characters: core prints tag names unescaped inside attributes (the
+ *   keywords meta, the tags page), and in core only administrators name tags
+ * - a backslash: the admin tags page writes orphan tag names into a
+ *   JavaScript array literal, where it escapes the closing quote
+ * - characters outside the Basic Multilingual Plane, as most emoji are, and
+ *   bytes that are no UTF-8: the tags table is utf8mb3
+ * - a name, or the URL name core derives from it (which spells some letters
+ *   with two), longer than the columns hold
+ * @param string $name cleaned and trimmed
+ * @return bool
+ */
+function typetags_typed_tag_name_is_valid($name)
+{
+  return $name !== ''
+    and preg_match('/^[\x{0}-\x{FFFF}]*$/u', $name) === 1
+    and preg_match('/["<>\\\\[:cntrl:]]/', $name) === 0
+    and mb_strlen($name) <= TYPETAGS_NAME_MAX_LENGTH
+    and mb_strlen(trigger_change('render_tag_url', $name)) <= TYPETAGS_NAME_MAX_LENGTH;
+}
+
+/**
+ * The badge of one tag, as its group draws it
+ * @param int $tag_id
+ * @return array style and emoji_html, both '' for a tag in no group
+ */
+function typetags_tag_badge($tag_id)
+{
+  $query = '
+SELECT tt.color, tt.striped, tt.emoji
+  FROM ' . TAGS_TABLE . ' AS t
+    INNER JOIN ' . TYPETAGS_TABLE . ' AS tt ON t.id_typetags = tt.id
+  WHERE t.id = ' . (int)$tag_id . '
+;';
+  $group = pwg_db_fetch_assoc(pwg_query($query));
+  if (empty($group))
+  {
+    return array('style' => '', 'emoji_html' => '');
+  }
+
+  return array(
+    'style' => typetags_badge_style($group['color'], !empty($group['striped'])),
+    'emoji_html' => typetags_emoji_html($group['emoji']),
+    );
 }
 
 function ws_typetags_image_removeTag($params, &$service)

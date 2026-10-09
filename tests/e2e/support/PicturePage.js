@@ -22,6 +22,26 @@ class PicturePage {
     this.removeButtons = page.locator('.typetag-remove');
     this.unassignedBox = page.locator('#typetags-unassigned');
     this.addBadges = page.locator('.typetag-add');
+    this.newTagForm = page.locator('#typetags-new-tag');
+    this.newTagField = this.newTagForm.locator('input[name="tag_name"]');
+    this.newTagButton = this.newTagForm.locator('button[type="submit"]');
+    this.newTagError = this.newTagForm.locator('.typetags-new-tag-error');
+    this.markupInTagsRow = page.locator('#Tags dd b, #Tags dd i, #Tags dd script');
+  }
+
+  /**
+   * Types a name into the field for a new tag and sends it, waiting for the
+   * server's answer.
+   *
+   * @param {string} name
+   */
+  async addNewTag(name) {
+    await this.newTagField.fill(name);
+    const answer = this.page.waitForResponse(
+      (r) => r.url().includes('ws.php') && (r.request().postData() || '').includes('typetags.image.addNewTag')
+    );
+    await this.newTagButton.click();
+    await answer;
   }
 
   /** @param {{image_id: number, category_id: number}} fixture */

@@ -17,6 +17,7 @@
  *   php tests/e2e/support/seed.php --scenario=no-tags --with-striped-group
  *   php tests/e2e/support/seed.php --restore
  *   php tests/e2e/support/seed.php --delete-typetag=<name>
+ *   php tests/e2e/support/seed.php --track-tag=<name>
  *
  * Both forms print one JSON object on stdout. Errors go to stderr with exit 1.
  *
@@ -113,6 +114,34 @@ if (isset($args['delete-typetag']))
     echo json_encode(array(
         'deleted_typetag' => $name,
         'remaining' => (int)$db->scalar('SELECT COUNT(*) FROM piwigo_typetags'),
+        )), "\n";
+    exit(0);
+}
+
+// ── Remember a tag a spec created through the UI ───────────────────────────
+
+/**
+ * A tag typed into the picture page's field is created by the server, so the
+ * snapshot never saw it. Recording it there makes --restore delete it with the
+ * spec's other objects. Prints the tag's id and group, null when no tag of
+ * that name exists.
+ */
+if (isset($args['track-tag']))
+{
+    $name = $args['track-tag'];
+    $snapshot = load_snapshot();
+    if (!is_string($name) or $name === '' or $snapshot === null)
+    {
+        fail('--track-tag needs a tag name and a seeded scenario');
+    }
+
+    $builder->importState($snapshot);
+    $id = $builder->trackTagNamed($name);
+    save_snapshot($builder->exportState());
+
+    echo json_encode(array(
+        'tag_id' => $id,
+        'id_typetags' => $id === null ? null : $db->scalar("SELECT id_typetags FROM piwigo_tags WHERE id = $id"),
         )), "\n";
     exit(0);
 }

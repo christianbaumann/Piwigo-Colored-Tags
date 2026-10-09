@@ -50,4 +50,15 @@ function deleteTypetag(name) {
   return JSON.parse(stdout);
 }
 
-module.exports = { seed, restore, deleteTypetag };
+/**
+ * Record a tag the browser created, so restore() deletes it.
+ *
+ * @param {string} name the name as stored
+ * @returns {{tag_id: number|null, id_typetags: string|null}}
+ */
+function trackTag(name) {
+  const stdout = execFileSync('php', [SEED_SCRIPT, `--track-tag=${name}`], { encoding: 'utf8' });
+  return JSON.parse(stdout);
+}
+
+module.exports = { seed, restore, deleteTypetag, trackTag };

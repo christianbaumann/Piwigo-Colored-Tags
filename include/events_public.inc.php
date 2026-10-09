@@ -186,6 +186,13 @@ function typetags_picture_prefilter($content)
   {/foreach}
 </div>
 {/if}
+{if isset($TYPETAGS_IMAGE_ID)}
+<form id="typetags-new-tag" style="margin:8px 0;">
+  <input type="text" name="tag_name" placeholder="{\'Type a new tag\'|@translate}" aria-label="{\'Type a new tag\'|@translate}">
+  <button type="submit">{\'Add the tag\'|@translate}</button>
+  <span class="typetags-new-tag-error" style="color:#c00;margin-left:8px;" hidden></span>
+</form>
+{/if}
 ';
 
   $content = str_replace(TYPETAGS_TPL_INJECT_POINT, $injection . TYPETAGS_TPL_INJECT_POINT, $content);
@@ -199,11 +206,56 @@ function typetags_picture_prefilter($content)
   var pwgToken = "{$TYPETAGS_PWG_TOKEN}";
   var assignedColoredIds = [{foreach from=$TYPETAGS_ASSIGNED_COLORED_IDS item=tid name=tidloop}{$tid}{if !$smarty.foreach.tidloop.last},{/if}{/foreach}];
 
+  // The remove button in the badge of a coloured tag
+  function removeButton(tagId) {ldelim}
+    return jQuery(\'<span class="typetag-remove" style="cursor:pointer;font-size:0.8em;" title="{\'Remove tag\'|@translate}">&times;</span>\').attr("data-tag-id", tagId);
+  {rdelim}
+
+  // The content of a badge: the emoji (server-built entities), then the name as text
+  function badgeLabel(target, name, emojiHtml) {ldelim}
+    if (emojiHtml) {ldelim}
+      target.append(jQuery(\'<span class="typetag-emoji"></span>\').html(emojiHtml), " ");
+    {rdelim}
+    return target.append(document.createTextNode(name));
+  {rdelim}
+
+  // The link of an assigned tag: a badge with a remove button for a coloured tag, plain text otherwise
+  function tagLink(tagId, name, style, emojiHtml) {ldelim}
+    var link = jQuery(\'<a href="#"></a>\').attr("data-tag-id", tagId);
+    if (!style) {ldelim}
+      return link.text(name);
+    {rdelim}
+    var badge = badgeLabel(jQuery("<span></span>").attr("style", style), name, emojiHtml);
+    return link.append(badge.append(" ", removeButton(tagId)));
+  {rdelim}
+
+  // Adds a link to the Tags row, creating the row when the photo had no tag
+  function appendToTagsRow(link) {ldelim}
+    var tagsDD = jQuery("#Tags dd");
+    if (tagsDD.length === 0) {ldelim}
+      var tagsDiv = jQuery(\'<div id="Tags" class="imageInfo"><dt>{\'Tags\'|@translate}</dt><dd></dd></div>\');
+      tagsDiv.find("dd").append(link);
+      // Insert before Albums or at end of dl#standard
+      var albums = jQuery("#Categories");
+      if (albums.length) {ldelim}
+        albums.before(tagsDiv);
+      {rdelim} else {ldelim}
+        jQuery("dl#standard").children().last().after(tagsDiv);
+      {rdelim}
+    {rdelim} else {ldelim}
+      if (tagsDD.children().length > 0) {ldelim}
+        tagsDD.append(", ");
+      {rdelim}
+      tagsDD.append(link);
+      jQuery("#Tags").show();
+    {rdelim}
+  {rdelim}
+
   // Add "x" buttons inside assigned colored tag badges
   jQuery("#Tags a[data-tag-id]").each(function() {ldelim}
     var tagId = parseInt(jQuery(this).data("tag-id"));
     if (assignedColoredIds.indexOf(tagId) !== -1) {ldelim}
-      jQuery(this).find("span[style]").append(\' <span class="typetag-remove" data-tag-id="\' + tagId + \'" style="cursor:pointer;font-size:0.8em;" title="{\'Remove tag\'|@translate}">&times;</span>\');
+      jQuery(this).find("span[style]").append(" ", removeButton(tagId));
     {rdelim}
   {rdelim});
 
@@ -228,31 +280,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
-          // Build assigned tag badge with "x" inside
-          var removeBtn = \'<span class="typetag-remove" data-tag-id="\' + tagId + \'" style="cursor:pointer;font-size:0.8em;" title="{\'Remove tag\'|@translate}">&times;</span>\';
-          var label = (tagEmoji ? \'<span class="typetag-emoji">\' + tagEmoji + \'</span> \' : "") + tagName;
-          var badge = \'<span style="\' + tagStyle + \'">\' + label + \' \' + removeBtn + \'</span>\';
-          var link = \'<a href="#" data-tag-id="\' + tagId + \'">\' + badge + \'</a>\';
-
-          var tagsDD = jQuery("#Tags dd");
-          if (tagsDD.length === 0) {ldelim}
-            // Tags section doesn\'t exist yet, create it
-            var tagsDiv = \'<div id="Tags" class="imageInfo"><dt>{\'Tags\'|@translate}</dt><dd>\' + link + \'</dd></div>\';
-            // Insert before Albums or at end of dl#standard
-            var albums = jQuery("#Categories");
-            if (albums.length) {ldelim}
-              albums.before(tagsDiv);
-            {rdelim} else {ldelim}
-              jQuery("dl#standard").children().last().after(tagsDiv);
-            {rdelim}
-          {rdelim} else {ldelim}
-            // Append to existing tags
-            if (tagsDD.children().length > 0) {ldelim}
-              tagsDD.append(", ");
-            {rdelim}
-            tagsDD.append(link);
-            jQuery("#Tags").show();
-          {rdelim}
+          appendToTagsRow(tagLink(tagId, String(tagName), tagStyle, tagEmoji));
 
           // Remove from unassigned list
           el.remove();
@@ -294,13 +322,13 @@ function typetags_picture_prefilter($content)
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
           // Find the tag link (x button is now inside it)
-          var tagLink = el.closest("a[data-tag-id]");
+          var assignedLink = el.closest("a[data-tag-id]");
           var tagName = "";
           var tagStyle = "";
           var tagEmoji = "";
 
           // The style of the badge span is the badge style; the emoji is its own element
-          var badgeSpan = tagLink.find("span[style]").first();
+          var badgeSpan = assignedLink.find("span[style]").first();
           if (badgeSpan.length) {ldelim}
             tagName = badgeSpan.clone().children().remove().end().text().trim();
             tagStyle = badgeSpan.attr("style");
@@ -308,15 +336,15 @@ function typetags_picture_prefilter($content)
           {rdelim}
 
           // Remove separator (", " before or after)
-          var prev = tagLink[0].previousSibling;
-          var next = tagLink[0].nextSibling;
+          var prev = assignedLink[0].previousSibling;
+          var next = assignedLink[0].nextSibling;
           if (next && next.nodeType === 3 && next.textContent.trim() === ",") {ldelim}
             next.remove();
           {rdelim} else if (prev && prev.nodeType === 3 && prev.textContent.match(/,\s*$/)) {ldelim}
             prev.textContent = prev.textContent.replace(/,\s*$/, "");
           {rdelim}
 
-          tagLink.remove();
+          assignedLink.remove();
 
           // Remove from assigned list
           var idx = assignedColoredIds.indexOf(tagId);
@@ -324,9 +352,13 @@ function typetags_picture_prefilter($content)
 
           // Add back to unassigned list
           if (tagName && tagStyle) {ldelim}
-            var addStyle = tagStyle + "cursor:pointer;opacity:0.6;margin:2px;";
-            var addLabel = (tagEmoji ? \'<span class="typetag-emoji">\' + tagEmoji + \'</span> \' : "") + tagName;
-            var addBadge = \'<span class="typetag-badge typetag-add" data-tag-id="\' + tagId + \'" data-tag-name="\' + tagName + \'" data-tag-style="\' + tagStyle + \'" data-tag-emoji="\' + tagEmoji + \'" style="\' + addStyle + \'" title="{\'Add tag\'|@translate}">+ \' + addLabel + \'</span>\';
+            var addBadge = badgeLabel(jQuery(\'<span class="typetag-badge typetag-add" title="{\'Add tag\'|@translate}">+ </span>\').attr({ldelim}
+              "data-tag-id": tagId,
+              "data-tag-name": tagName,
+              "data-tag-style": tagStyle,
+              "data-tag-emoji": tagEmoji,
+              style: tagStyle + "cursor:pointer;opacity:0.6;margin:2px;"
+            {rdelim}), tagName, tagEmoji);
             var container = jQuery("#typetags-unassigned");
             if (container.length === 0) {ldelim}
               container = jQuery(\'<div id="typetags-unassigned" style="margin:8px 0;line-height:2.2;"></div>\');
@@ -347,6 +379,57 @@ function typetags_picture_prefilter($content)
       {rdelim},
       error: function() {ldelim}
         el.css("pointer-events", "");
+      {rdelim}
+    {rdelim});
+  {rdelim});
+
+  // Submit: assign a typed tag, created when the name is new
+  jQuery("#typetags-new-tag").on("submit", function(e) {ldelim}
+    e.preventDefault();
+    var form = jQuery(this);
+    var field = form.find("input[name=tag_name]");
+    var button = form.find("button");
+    var error = form.find(".typetags-new-tag-error");
+    if (jQuery.trim(field.val()) === "") {ldelim}
+      return;
+    {rdelim}
+    button.prop("disabled", true);
+
+    jQuery.ajax({ldelim}
+      url: "ws.php?format=json",
+      type: "POST",
+      data: {ldelim}
+        method: "typetags.image.addNewTag",
+        image_id: imageId,
+        tag_name: field.val(),
+        pwg_token: pwgToken
+      {rdelim},
+      dataType: "json",
+      success: function(data) {ldelim}
+        button.prop("disabled", false);
+        if (data.stat !== "ok") {ldelim}
+          // PwgError arrives as HTTP 200 + stat:"fail", so it lands here, not in error()
+          error.text(data.message || "{\'The tag was not saved\'|@translate|escape:javascript}").prop("hidden", false);
+          return;
+        {rdelim}
+
+        var tag = data.result;
+        if (jQuery("#Tags dd a[data-tag-id=\'" + tag.tag_id + "\']").length === 0) {ldelim}
+          appendToTagsRow(tagLink(tag.tag_id, tag.name, tag.style, tag.emoji_html));
+          if (tag.style) {ldelim}
+            assignedColoredIds.push(tag.tag_id);
+          {rdelim}
+          jQuery(".typetag-add[data-tag-id=\'" + tag.tag_id + "\']").remove();
+          if (jQuery("#typetags-unassigned .typetag-add").length === 0) {ldelim}
+            jQuery("#typetags-unassigned").hide();
+          {rdelim}
+        {rdelim}
+        field.val("");
+        error.text("").prop("hidden", true);
+      {rdelim},
+      error: function() {ldelim}
+        button.prop("disabled", false);
+        error.text("{\'The tag was not saved\'|@translate|escape:javascript}").prop("hidden", false);
       {rdelim}
     {rdelim});
   {rdelim});

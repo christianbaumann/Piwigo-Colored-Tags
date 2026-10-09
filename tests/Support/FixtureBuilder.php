@@ -254,6 +254,21 @@ SELECT t.id
         return (int)$id;
     }
 
+    /**
+     * The tag of that name, if the server created one while a test ran, so
+     * restore() removes it.
+     */
+    public function trackTagNamed(string $name): ?int
+    {
+        $id = $this->db->scalar("SELECT id FROM piwigo_tags WHERE name = '" . $this->db->escape($name) . "'");
+        if ($id === null)
+        {
+            return null;
+        }
+        $this->createdTagIds[] = (int)$id;
+        return (int)$id;
+    }
+
     public function ensurePlainTagId(): int
     {
         $existing = $this->db->scalar('SELECT id FROM piwigo_tags WHERE id_typetags IS NULL LIMIT 1');
