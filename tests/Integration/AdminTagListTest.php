@@ -75,4 +75,26 @@ final class AdminTagListTest extends TestCase
         $this->assertSame($tag['name_raw'], $tag['name']);
         $this->assertStringNotContainsString('<', $tag['name']);
     }
+
+    /**
+     * [NEG] Renaming a tag on the admin tag screen: core's tags.js puts the
+     * answered name into the tag box with .html() and into the edit field's
+     * value, so it must come back plain like the admin list's. The fixture tag
+     * is deleted in tearDown, so the new name needs no restore.
+     */
+    public function testRenamingAColouredTagAnswersThePlainName(): void
+    {
+        $newName = '_fixture_striped_tag_renamed';
+        $res = $this->ws->call('pwg.tags.rename', array(
+            'tag_id' => $this->striped['tag_id'],
+            'new_name' => $newName,
+            'pwg_token' => $this->ws->token(),
+        ));
+        $this->assertSame('ok', $res['json']['stat'] ?? null, $res['body']);
+        $this->assertSame($newName, (string)$this->db->scalar("SELECT name FROM piwigo_tags WHERE id = {$this->striped['tag_id']}"));
+        $this->assertContains($this->striped['tag_id'], $this->fixtures->stripedTagIds(), 'anti-vacuity: the renamed tag must still be coloured');
+
+        $this->assertSame($newName, $res['json']['result']['name']);
+        $this->assertStringNotContainsString('<', $res['json']['result']['name']);
+    }
 }
