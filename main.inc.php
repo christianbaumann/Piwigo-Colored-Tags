@@ -342,12 +342,9 @@ SELECT id FROM ' . TAGS_TABLE . '
     return new PwgError(404, 'Tag not found or not a colored tag');
   }
 
-  // Verify the image exists (INSERT IGNORE would otherwise create an orphan row)
-  $query = '
-SELECT id FROM ' . IMAGES_TABLE . '
-  WHERE id = ' . (int)$params['image_id'] . '
-;';
-  if (!pwg_db_num_rows(pwg_query($query)))
+  // A photo the account cannot see is answered like a missing one (a missing
+  // one would also leave an orphan row behind INSERT IGNORE)
+  if (!typetags_image_visible($params['image_id']))
   {
     return new PwgError(404, 'Image not found');
   }
@@ -396,11 +393,7 @@ function ws_typetags_image_addNewTag($params, &$service)
     return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid tag name'));
   }
 
-  $query = '
-SELECT id FROM ' . IMAGES_TABLE . '
-  WHERE id = ' . (int)$params['image_id'] . '
-;';
-  if (!pwg_db_num_rows(pwg_query($query)))
+  if (!typetags_image_visible($params['image_id']))
   {
     return new PwgError(404, 'Image not found');
   }
@@ -437,6 +430,32 @@ SELECT name FROM ' . TAGS_TABLE . '
       ),
     typetags_tag_badge($tag_id)
     );
+}
+
+/**
+ * Whether the current account may see a photo: it exists and sits in an album
+ * the account has access to, by core's own permission condition. The picture
+ * page's tag methods act only on such a photo.
+ * @param int $image_id
+ * @return bool
+ */
+function typetags_image_visible($image_id)
+{
+  $query = '
+SELECT DISTINCT image_id
+  FROM ' . IMAGE_CATEGORY_TABLE . '
+    INNER JOIN ' . IMAGES_TABLE . ' ON id = image_id
+  WHERE image_id = ' . (int)$image_id . '
+' . get_sql_condition_FandF(
+    array(
+      'forbidden_categories' => 'category_id',
+      'visible_categories' => 'category_id',
+      'visible_images' => 'id',
+      ),
+    '    AND'
+    ) . '
+;';
+  return pwg_db_num_rows(pwg_query($query)) > 0;
 }
 
 /**
@@ -508,6 +527,11 @@ SELECT id FROM ' . TAGS_TABLE . '
   if (!pwg_db_num_rows(pwg_query($query)))
   {
     return new PwgError(404, 'Tag not found or not a colored tag');
+  }
+
+  if (!typetags_image_visible($params['image_id']))
+  {
+    return new PwgError(404, 'Image not found');
   }
 
   $query = '

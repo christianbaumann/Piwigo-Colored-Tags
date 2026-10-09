@@ -255,6 +255,50 @@ SELECT t.id
     }
 
     /**
+     * Makes the throwaway photo's album private, so only an administrator or
+     * an account granted the album sees the photo. Every account's cached
+     * permissions are thrown away: they were computed while the album was
+     * public. restore() deletes the album with the photo.
+     */
+    public function makeTestAlbumPrivate(): void
+    {
+        if ($this->testImage === null)
+        {
+            throw new RuntimeException('no throwaway photo to hide; call testImageId() first');
+        }
+        $albumId = (int)$this->testImage['album_id'];
+        $this->db->query("UPDATE piwigo_categories SET status = 'private' WHERE id = $albumId");
+        $this->db->query("DELETE FROM piwigo_user_access WHERE cat_id = $albumId");
+        $this->db->query("DELETE FROM piwigo_group_access WHERE cat_id = $albumId");
+        $this->db->query("UPDATE piwigo_user_cache SET need_update = 'true'");
+        if ($this->db->scalar("SELECT status FROM piwigo_categories WHERE id = $albumId") !== 'private')
+        {
+            throw new RuntimeException("album $albumId did not become private");
+        }
+    }
+
+    /** Grants one account the throwaway photo's private album. */
+    public function grantTestAlbumTo(string $username): void
+    {
+        $albumId = (int)$this->testImage['album_id'];
+        $userId = (int)$this->db->scalar(
+            "SELECT id FROM piwigo_users WHERE username = '" . $this->db->escape($username) . "'"
+        );
+        if ($userId <= 0)
+        {
+            throw new RuntimeException("no account named $username");
+        }
+        $this->db->query("INSERT IGNORE INTO piwigo_user_access (user_id, cat_id) VALUES ($userId, $albumId)");
+        $this->db->query("UPDATE piwigo_user_cache SET need_update = 'true'");
+    }
+
+    /** Links tags to a photo directly, for a case that starts from them. */
+    public function givenAssigned(int $imageId, array $tagIds): void
+    {
+        $this->assign($imageId, $tagIds);
+    }
+
+    /**
      * The tag of that name, if the server created one while a test ran, so
      * restore() removes it.
      */
@@ -528,6 +572,8 @@ SELECT t.id
             $this->db->query("DELETE FROM piwigo_image_tag WHERE image_id = $imageId");
             $this->db->query("DELETE FROM piwigo_image_category WHERE image_id = $imageId OR category_id = $albumId");
             $this->db->query("DELETE FROM piwigo_images WHERE id = $imageId");
+            $this->db->query("DELETE FROM piwigo_user_access WHERE cat_id = $albumId");
+            $this->db->query("DELETE FROM piwigo_group_access WHERE cat_id = $albumId");
             $this->db->query("DELETE FROM piwigo_categories WHERE id = $albumId");
             foreach (glob($this->testImage['file'] . '*') as $leftover)
             {

@@ -8,9 +8,9 @@ use PHPUnit\Framework\TestCase;
  * that file left: it never exercised removeTag with a nonexistent tag, and
  * never asserted a full round trip against the database.
  *
- * removeTag has no image-existence check on purpose — a DELETE on a
- * nonexistent image is already a no-op, so there is no reachable defect to
- * guard against. The asymmetry with addTag is deliberate (see main.inc.php).
+ * Since the owner's answer Q17 (plan 2026-10-09) removeTag, like addTag,
+ * refuses a photo the account cannot see, a missing one included;
+ * VisibilityTest covers that.
  */
 final class RemoveTagTest extends TestCase
 {
