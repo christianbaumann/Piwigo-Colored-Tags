@@ -115,16 +115,17 @@ class PicturePage {
   }
 
   /**
-   * Names of the assigned tags, with the nested × stripped.
+   * Names of the assigned tags, with the nested × and a group's emoji stripped.
    *
    * The remove button is a child span *inside* the badge span, so the anchor's
-   * raw textContent reads "Personen ×" rather than "Personen".
+   * raw textContent reads "Personen ×" rather than "Personen". A group's emoji
+   * is a child span too, in front of the name.
    */
   async assignedNames() {
     return this.assignedTags.evaluateAll((anchors) =>
       anchors.map((a) => {
         const clone = /** @type {HTMLElement} */ (a.cloneNode(true));
-        clone.querySelectorAll('.typetag-remove').forEach((x) => x.remove());
+        clone.querySelectorAll('.typetag-remove, .typetag-emoji').forEach((x) => x.remove());
         return clone.textContent.trim();
       })
     );
@@ -171,8 +172,14 @@ class PicturePage {
       spans.map((span) => {
         const style = window.getComputedStyle(span);
         const box = span.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(span.firstChild);
         return {
           tagId: Number(span.getAttribute('data-tag-id')),
+          // where the first character starts, from the badge's left edge
+          contentInset: range.getBoundingClientRect().left - box.left,
+          backgroundSize: style.backgroundSize,
+          borderLeftWidth: style.borderLeftWidth,
           backgroundColor: style.backgroundColor,
           backgroundImage: style.backgroundImage,
           borderColor: style.borderLeftColor,

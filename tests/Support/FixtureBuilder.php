@@ -121,9 +121,9 @@ SELECT t.id
      * palette may hold no striped group at all, so the specs for the striped
      * look bring their own.
      *
-     * @return int the tag's id
+     * @return array{tag_id: int, group_id: int}
      */
-    public function createStripedGroup(): int
+    public function createStripedGroup(): array
     {
         $this->db->query("INSERT INTO piwigo_typetags (name, color, striped, emoji)
             VALUES ('_fixture_striped_group', '" . self::STRIPED_GROUP_COLOR . "', 1, '" . self::STRIPED_GROUP_EMOJI . "')");
@@ -139,7 +139,7 @@ SELECT t.id
         {
             throw new RuntimeException("Fixture tag $tagId did not come out striped");
         }
-        return $tagId;
+        return array('tag_id' => $tagId, 'group_id' => $groupId);
     }
 
     public function anyImageId(): int

@@ -153,14 +153,14 @@ test.describe('assigning a coloured tag', () => {
     const assigned = (await picture.assignedBadgePaint()).find((b) => b.tagId === tagId);
     expect(assigned.backgroundImage).toContain(colour);
     expect(assigned.borderColor).toBe(colour);
-    expect(assigned.emoji).toBe('\u{270D}\u{FE0F}');
+    expect(assigned.emoji).toBe(fixture.striped_emoji);
 
     await picture.removeButton(tagId).click();
     await expect(picture.addBadge(tagId)).toHaveCount(1);
     const unassigned = (await picture.unassignedBadgePaint()).find((b) => b.tagId === tagId);
     expect(unassigned.backgroundImage).toContain(colour);
     expect(unassigned.borderColor).toBe(colour);
-    expect(unassigned.emoji).toBe('\u{270D}\u{FE0F}');
+    expect(unassigned.emoji).toBe(fixture.striped_emoji);
     // The emoji is not read back as part of the name.
     expect(await picture.unassignedTagName(tagId)).toBe(tagName);
   });

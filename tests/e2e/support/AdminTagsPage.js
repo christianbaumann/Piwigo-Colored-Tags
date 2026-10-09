@@ -43,6 +43,29 @@ class AdminTagsPage {
     this.colorOptions = page.locator('.color-option-container .color-option');
   }
 
+  /** The round sample of one group in the colour panel. */
+  colorOptionSample(/** @type {number|string} */ id) {
+    return this.colorOption(id).locator('.color-sample');
+  }
+
+  /** The label of one group in the colour panel. */
+  colorOptionName(/** @type {number|string} */ id) {
+    return this.colorOption(id).locator('.color-name');
+  }
+
+  /** The coloured dot tags.js puts in front of a tag in the list. */
+  tagColorSample(/** @type {number} */ tagId) {
+    return this.page.locator(`.tag-box[data-id="${tagId}"] .typetag-color-sample`);
+  }
+
+  /** The background a locator is painted with, as the browser computed it. */
+  static async paint(/** @type {import('@playwright/test').Locator} */ locator) {
+    return locator.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return { backgroundColor: style.backgroundColor, backgroundImage: style.backgroundImage };
+    });
+  }
+
   /** The swatch a created colour produces, addressed by the id the server returned. */
   colorOption(/** @type {number|string} */ id) {
     return this.page.locator(`.color-option-container .color-option[data-id="${id}"]`);

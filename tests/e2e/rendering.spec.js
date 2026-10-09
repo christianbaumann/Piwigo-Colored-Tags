@@ -37,7 +37,7 @@ function expectGroupColour(badge, expected) {
     expect(badge.backgroundColor, `tag ${badge.tagId} background`).toBe(WHITE);
     expect(badge.backgroundImage, `tag ${badge.tagId} tab`).toContain(expected.rgb);
     expect(badge.borderColor, `tag ${badge.tagId} border`).toBe(expected.rgb);
-    expect(badge.color, `tag ${badge.tagId} text colour`).toBe(BLACK);
+    expect(badge.color, `tag ${badge.tagId} text colour`).toBe(expected.text_rgb);
   } else {
     expect(badge.backgroundColor, `tag ${badge.tagId} background`).toBe(expected.rgb);
     expect([BLACK, WHITE], `tag ${badge.tagId} text colour`).toContain(badge.color);
@@ -130,7 +130,13 @@ test.describe('on-screen rendering', () => {
     expect(badge, 'the striped tag has a badge').toBeTruthy();
     expect(badge.backgroundImage).toMatch(/^repeating-linear-gradient\(45deg, /);
     expectGroupColour(badge, fixture.colors[tagId]);
-    expect(badge.emoji).toBe('\u{270D}\u{FE0F}');
+    expect(badge.emoji).toBe(fixture.striped_emoji);
+    // The text sits on white, right of the stripes, never on them. The tab is the
+    // first background layer and starts inside the border.
+    expect(badge.backgroundSize).toMatch(/^\d+(\.\d+)?px /);
+    const tabEnd = parseFloat(badge.borderLeftWidth) + parseFloat(badge.backgroundSize);
+    expect(tabEnd).toBeGreaterThan(0);
+    expect(badge.contentInset).toBeGreaterThanOrEqual(tabEnd);
     expect(badge.width).toBeGreaterThan(MIN_BADGE_WIDTH);
     expect(badge.height).toBeGreaterThan(MIN_BADGE_HEIGHT);
   });

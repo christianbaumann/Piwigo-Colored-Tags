@@ -56,12 +56,29 @@ final class PluginActivationTest extends TestCase
      */
     public function testConfigurationPageRendersEveryConfiguredColour(): void
     {
+        // Forces a striped group, so both branches below run whatever the palette holds.
+        $fixtures = new FixtureBuilder($this->db);
+        $fixtures->createStripedGroup();
+        try
+        {
+            $this->assertEveryColourIsPainted();
+        }
+        finally
+        {
+            $fixtures->restore();
+        }
+    }
+
+    private function assertEveryColourIsPainted(): void
+    {
         $colours = array();
-        $result = $this->db->query('SELECT color FROM piwigo_typetags');
+        $result = $this->db->query('SELECT color, striped FROM piwigo_typetags');
         while ($row = $result->fetch_row())
         {
-            $colours[] = $row[0];
+            $colours[] = array($row[0], (bool)$row[1]);
         }
+        $this->assertContains(true, array_column($colours, 1), 'anti-vacuity: no striped group to check');
+        $this->assertContains(false, array_column($colours, 1), 'anti-vacuity: no plain group to check');
 
         $this->assertGreaterThan(
             0,
@@ -77,10 +94,11 @@ final class PluginActivationTest extends TestCase
         $this->assertStringNotContainsString('Smarty Compiler', $res['body']);
         $this->assertStringContainsString('Colored Tags', $res['body'], 'the plugin page, not a redirect to some other admin screen');
 
-        foreach ($colours as $colour)
+        // A striped group paints its colour into the tab and the border instead.
+        foreach ($colours as list($colour, $striped))
         {
             $this->assertStringContainsString(
-                'background-color:' . $colour . ';',
+                $striped ? 'border:1px solid ' . $colour . ';' : 'background-color:' . $colour . ';',
                 $res['body'],
                 "configured colour $colour is not painted on the configuration page"
             );

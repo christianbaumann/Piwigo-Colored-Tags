@@ -164,7 +164,7 @@ if ($existing !== null)
 $builder->recordTagCounts();
 
 // Before the scenario, so the scenario counts the striped tag among the coloured ones.
-$stripedTagId = isset($args['with-striped-group']) ? $builder->createStripedGroup() : null;
+$striped_group = isset($args['with-striped-group']) ? $builder->createStripedGroup() : null;
 
 $method = SCENARIOS[$scenario];
 $result = $builder->$method($imageId);
@@ -188,6 +188,11 @@ foreach ($builder->coloredTagColors() as $tagId => $hex)
         'rgb' => sprintf('rgb(%d, %d, %d)', $rgb[0], $rgb[1], $rgb[2]),
         'striped' => in_array($tagId, $striped),
         );
+    if ($colors[$tagId]['striped'])
+    {
+        $text = sscanf(typetags_text_color($hex, true), '#%1x%1x%1x');
+        $colors[$tagId]['text_rgb'] = sprintf('rgb(%d, %d, %d)', $text[0] * 17, $text[1] * 17, $text[2] * 17);
+    }
 }
 
 echo json_encode(array(
@@ -200,5 +205,8 @@ echo json_encode(array(
     'assigned_colored_count' => count($assignedColored),
     'unassigned_colored_count' => count($colored) - count($assignedColored),
     'colored_total' => count($colored),
-    'striped_tag_id' => $stripedTagId,
+    'striped_tag_id' => $striped_group['tag_id'] ?? null,
+    'striped_group_id' => $striped_group['group_id'] ?? null,
+    // the fixture group's emoji as the characters a browser shows
+    'striped_emoji' => $striped_group ? html_entity_decode(typetags_emoji_html(FixtureBuilder::STRIPED_GROUP_EMOJI), ENT_HTML5, 'UTF-8') : null,
     )), "\n";
