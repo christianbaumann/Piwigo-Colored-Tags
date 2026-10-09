@@ -119,7 +119,7 @@ test.describe('on-screen rendering', () => {
   });
 
   test('a striped group paints the tab and border at real size', async ({ page }) => {
-    const fixture = seed('no-tags', 1, { stripedGroup: true });
+    const fixture = seed('no-tags', null, { stripedGroup: true });
     const tagId = fixture.striped_tag_id;
     expect(fixture.colors[tagId].striped).toBe(true);
 

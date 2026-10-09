@@ -23,6 +23,12 @@ class FixtureBuilder
     /** colour group ids created by this builder, deleted on restore after their tags */
     private array $createdGroupIds = array();
 
+    /** the throwaway photo testImageId() made: id, file, album_id; null until asked for */
+    private ?array $testImage = null;
+
+    /** Where testImageId() puts its copy, under the Piwigo root. */
+    private const TEST_IMAGE_DIR = 'upload/typetags-test/';
+
     public const STRIPED_GROUP_COLOR = '#d00000';
     public const STRIPED_GROUP_EMOJI = '270D FE0F';
 
@@ -142,9 +148,88 @@ SELECT t.id
         return array('tag_id' => $tagId, 'group_id' => $groupId);
     }
 
-    public function anyImageId(): int
+    /**
+     * A photo of this suite's own, made once per builder: a copy of the first
+     * gallery PNG in a public album of its own. Never a real photo: with
+     * plugins/photoinfo active, every tag change writes the photo's file.
+     * What the copy brings along of persons and keywords is removed, so its
+     * tags are only the ones a scenario gives it.
+     */
+    public function testImageId(): int
     {
-        return (int)$this->db->scalar('SELECT id FROM piwigo_images ORDER BY id LIMIT 1');
+        if ($this->testImage !== null)
+        {
+            return $this->testImage['id'];
+        }
+
+        $source = (string)$this->db->scalar(
+            "SELECT path FROM piwigo_images WHERE path LIKE '%.png' AND width IS NOT NULL ORDER BY id LIMIT 1"
+        );
+        $sourceFile = PIWIGO_ROOT . ltrim($source, './');
+        $dir = PIWIGO_ROOT . self::TEST_IMAGE_DIR;
+        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir))
+        {
+            throw new RuntimeException("cannot create $dir");
+        }
+        $name = 'typetags-test-' . bin2hex(random_bytes(8)) . '.png';
+        if (!is_file($sourceFile) or !copy($sourceFile, $dir . $name))
+        {
+            throw new RuntimeException("cannot copy $sourceFile to $dir$name");
+        }
+        self::stripCopiedMetadata($dir . $name);
+
+        $dimensions = getimagesize($dir . $name);
+        $dbPath = './' . self::TEST_IMAGE_DIR . $name;
+        $this->db->query(
+            'INSERT INTO piwigo_images (file, path, date_available, filesize, width, height) VALUES (' .
+            "'$name', '$dbPath', NOW(), " . (int)ceil(filesize($dir . $name) / 1024) . ', ' .
+            (int)$dimensions[0] . ', ' . (int)$dimensions[1] . ')'
+        );
+        $imageId = $this->db->insertId();
+
+        $this->db->query(
+            "INSERT INTO piwigo_categories (name, id_uppercat, uppercats, rank, global_rank, status, visible) " .
+            "VALUES ('typetags-test-$name', NULL, '', 1, '1', 'public', 'true')"
+        );
+        $albumId = $this->db->insertId();
+        $this->db->query("UPDATE piwigo_categories SET uppercats = '$albumId', global_rank = '$albumId' WHERE id = $albumId");
+        $this->db->query("INSERT INTO piwigo_image_category (image_id, category_id) VALUES ($imageId, $albumId)");
+
+        $this->testImage = array('id' => $imageId, 'file' => $dir . $name, 'album_id' => $albumId);
+        if ($imageId <= 0 or $albumId <= 0 or $this->categoryIdFor($imageId) !== $albumId)
+        {
+            throw new RuntimeException('the test photo and its album were not created');
+        }
+
+        return $imageId;
+    }
+
+    /**
+     * Removes what a copied gallery photo brings along of persons and of
+     * photoinfo's tag writes, and asserts none is left. The pwginfo group is
+     * deleted as a whole, which needs no -config.
+     */
+    private static function stripCopiedMetadata(string $file): void
+    {
+        $fields = array('XMP-mwg-rs:RegionInfo', 'XMP-iptcExt:PersonInImage', 'XMP-dc:Subject', 'IPTC:Keywords',
+            'XMP-lr:HierarchicalSubject', 'XMP-pwginfo:all');
+        $deletes = array_map(fn ($field) => escapeshellarg('-' . $field . '='), $fields);
+        $reads = array_map(fn ($field) => escapeshellarg('-' . $field), $fields);
+
+        $output = array();
+        $status = 1;
+        exec('exiftool -q -overwrite_original ' . implode(' ', $deletes) . ' ' . escapeshellarg($file) . ' 2>&1', $output, $status);
+        if ($status !== 0)
+        {
+            throw new RuntimeException("cannot strip the copied metadata of $file: " . implode("\n", $output));
+        }
+
+        $left = array();
+        exec('exiftool -s3 ' . implode(' ', $reads) . ' ' . escapeshellarg($file) . ' 2>&1', $left);
+        if (trim(implode("\n", $left)) !== '')
+        {
+            throw new RuntimeException("regions or keywords left in $file: " . implode("\n", $left));
+        }
     }
 
     /**
@@ -356,6 +441,7 @@ SELECT t.id
             'tag_counts' => $this->originalTagCounts,
             'created_tag_ids' => $this->createdTagIds,
             'created_group_ids' => $this->createdGroupIds,
+            'test_image' => $this->testImage,
             );
     }
 
@@ -383,6 +469,7 @@ SELECT t.id
 
         $this->createdTagIds = array_map('intval', $state['created_tag_ids'] ?? array());
         $this->createdGroupIds = array_map('intval', $state['created_group_ids'] ?? array());
+        $this->testImage = isset($state['test_image']) ? $state['test_image'] : null;
     }
 
     // ── Restore ───────────────────────────────────────────────────────────
@@ -418,5 +505,25 @@ SELECT t.id
             $this->db->query("DELETE FROM piwigo_typetags WHERE id = $groupId");
         }
         $this->createdGroupIds = array();
+
+        if ($this->testImage !== null)
+        {
+            $imageId = (int)$this->testImage['id'];
+            $albumId = (int)$this->testImage['album_id'];
+            $this->db->query("DELETE FROM piwigo_image_tag WHERE image_id = $imageId");
+            $this->db->query("DELETE FROM piwigo_image_category WHERE image_id = $imageId OR category_id = $albumId");
+            $this->db->query("DELETE FROM piwigo_images WHERE id = $imageId");
+            $this->db->query("DELETE FROM piwigo_categories WHERE id = $albumId");
+            foreach (glob($this->testImage['file'] . '*') as $leftover)
+            {
+                @unlink($leftover);
+            }
+            $derivatives = PIWIGO_ROOT . '_data/i/' . self::TEST_IMAGE_DIR . pathinfo($this->testImage['file'], PATHINFO_FILENAME);
+            foreach (glob($derivatives . '-*') as $derivative)
+            {
+                @unlink($derivative);
+            }
+            $this->testImage = null;
+        }
     }
 }

@@ -18,7 +18,7 @@ test.describe('a striped group on the admin screens', () => {
   });
 
   test('the photo properties chip gets the tab, the border and the emoji', async ({ page }) => {
-    const fixture = seed('all-assigned', 1, { stripedGroup: true });
+    const fixture = seed('all-assigned', null, { stripedGroup: true });
     const tagId = fixture.striped_tag_id;
     expect(fixture.assigned).toContain(tagId);
     const { rgb: colour, text_rgb: text } = fixture.colors[tagId];
@@ -36,7 +36,7 @@ test.describe('a striped group on the admin screens', () => {
   });
 
   test('the tags screen paints the striped dot and swatch', async ({ page }) => {
-    const fixture = seed('no-tags', 1, { stripedGroup: true });
+    const fixture = seed('no-tags', null, { stripedGroup: true });
     const colour = fixture.colors[fixture.striped_tag_id].rgb;
 
     const tags = new AdminTagsPage(page);

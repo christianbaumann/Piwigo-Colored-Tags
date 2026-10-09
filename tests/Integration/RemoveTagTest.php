@@ -34,7 +34,7 @@ final class RemoveTagTest extends TestCase
         }
         $this->coloredTagId = $colored[0];
 
-        $this->imageId = $this->fixtures->anyImageId();
+        $this->imageId = $this->fixtures->testImageId();
         $this->fixtures->imageWithNoTags($this->imageId);
     }
 

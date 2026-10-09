@@ -33,7 +33,7 @@ final class CacheInvalidationTest extends TestCase
         }
         $this->coloredTagId = $colored[0];
 
-        $this->imageId = $this->fixtures->anyImageId();
+        $this->imageId = $this->fixtures->testImageId();
         $this->fixtures->recordTagCounts();
         $this->fixtures->imageWithNoTags($this->imageId);
     }

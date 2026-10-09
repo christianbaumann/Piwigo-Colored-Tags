@@ -79,7 +79,7 @@ final class GermanScreenTest extends TestCase
      */
     private function picturePageWithBothStates(): string
     {
-        $imageId = $this->fixtures->anyImageId();
+        $imageId = $this->fixtures->testImageId();
         $state = $this->fixtures->someAssignedSomeUnassigned($imageId);
 
         $this->assertNotEmpty($state['assigned'], 'anti-vacuity: no assigned tag means no remove control');

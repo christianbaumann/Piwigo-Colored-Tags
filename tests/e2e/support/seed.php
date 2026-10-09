@@ -146,18 +146,19 @@ if (!is_string($scenario) or !isset(SCENARIOS[$scenario]))
     fail('--scenario must be one of: ' . implode(', ', array_keys(SCENARIOS)));
 }
 
-$imageId = isset($args['image']) ? (int)$args['image'] : $builder->anyImageId();
-if ($imageId <= 0)
-{
-    fail('--image must be a positive image id');
-}
-
 // Carry forward anything an earlier seed in this test already recorded, so a
-// second seed does not overwrite the first one's memory of the original state.
+// second seed does not overwrite the first one's memory of the original state,
+// and reuses its throwaway photo rather than making another.
 $existing = load_snapshot();
 if ($existing !== null)
 {
     $builder->importState($existing);
+}
+
+$imageId = isset($args['image']) ? (int)$args['image'] : $builder->testImageId();
+if ($imageId <= 0)
+{
+    fail('--image must be a positive image id');
 }
 
 // The web-service calls the specs make null nb_available_tags for every user.

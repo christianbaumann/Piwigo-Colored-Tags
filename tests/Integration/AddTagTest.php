@@ -34,7 +34,7 @@ final class AddTagTest extends TestCase
 
         // Force the tag unassigned: every case below is about what happens on
         // the way in, so none of them may start from an already-assigned tag.
-        $this->imageId = $this->fixtures->anyImageId();
+        $this->imageId = $this->fixtures->testImageId();
         $this->fixtures->imageWithNoTags($this->imageId);
     }
 

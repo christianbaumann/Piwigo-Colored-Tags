@@ -27,7 +27,7 @@ final class GroupStyleTest extends TestCase
         $this->db = new Db();
         $this->ws = new WsClient();
         $this->fixtures = new FixtureBuilder($this->db);
-        $this->imageId = $this->fixtures->anyImageId();
+        $this->imageId = $this->fixtures->testImageId();
 
         $this->db->query("INSERT INTO piwigo_typetags (name, color, striped, emoji)
             VALUES ('" . self::FIXTURE_PREFIX . "group', '" . self::COLOR . "', 1, '" . self::EMOJI . "')");
@@ -46,6 +46,7 @@ final class GroupStyleTest extends TestCase
         $this->db->query("DELETE FROM piwigo_image_tag WHERE tag_id = {$this->tagId}");
         $this->db->query("DELETE FROM piwigo_tags WHERE id = {$this->tagId}");
         $this->db->query("DELETE FROM piwigo_typetags WHERE id = {$this->groupId}");
+        $this->fixtures->restore();
         $this->ws->logout();
     }
 

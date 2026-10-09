@@ -13,11 +13,15 @@ const SEED_SCRIPT = path.join(__dirname, 'seed.php');
  * scenario name.
  *
  * @param {'some-assigned'|'all-assigned'|'all-but-one-assigned'|'no-tags'|'only-non-colored'|'colored-and-plain'} scenario
- * @param {number} imageId
+ * @param {number|null} imageId null for the suite's own throwaway photo; never a real photo, whose
+ *   file plugins/photoinfo rewrites on every tag change
  * @param {{stripedGroup?: boolean}} options stripedGroup adds a striped colour group with an emoji and one tag in it
  */
-function seed(scenario, imageId = 1, { stripedGroup = false } = {}) {
-  const args = [SEED_SCRIPT, `--scenario=${scenario}`, `--image=${imageId}`];
+function seed(scenario, imageId = null, { stripedGroup = false } = {}) {
+  const args = [SEED_SCRIPT, `--scenario=${scenario}`];
+  if (imageId !== null) {
+    args.push(`--image=${imageId}`);
+  }
   if (stripedGroup) {
     args.push('--with-striped-group');
   }

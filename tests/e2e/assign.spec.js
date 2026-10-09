@@ -140,7 +140,7 @@ test.describe('assigning a coloured tag', () => {
   test('a striped badge keeps its stripes after add and remove', async ({ page }) => {
     // Both directions rebuild the badge in the script, from what the page
     // carries, rather than from PHP.
-    const fixture = seed('no-tags', 1, { stripedGroup: true });
+    const fixture = seed('no-tags', null, { stripedGroup: true });
     const tagId = fixture.striped_tag_id;
     const colour = fixture.colors[tagId].rgb;
 

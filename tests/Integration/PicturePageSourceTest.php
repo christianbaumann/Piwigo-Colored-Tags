@@ -22,7 +22,7 @@ final class PicturePageSourceTest extends TestCase
         $this->ws = new WsClient();
         $this->fixtures = new FixtureBuilder($this->db);
 
-        $this->imageId = $this->fixtures->anyImageId();
+        $this->imageId = $this->fixtures->testImageId();
         $categoryId = $this->fixtures->categoryIdFor($this->imageId);
         $this->picturePath = "/picture.php?/{$this->imageId}/category/{$categoryId}";
     }
