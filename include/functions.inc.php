@@ -7,6 +7,10 @@ defined('TYPETAGS_PATH') or die('Hacking attempt!');
  */
 define('TYPETAGS_NAME_MAX_LENGTH', 255);
 
+// New tags one account may type in on the picture page in 24 hours. Tag ids
+// are smallint unsigned, so creation open to every account needs a bound.
+define('TYPETAGS_NEW_TAGS_PER_DAY', 255);
+
 /** The second colour of a striped group's tab, and the background it sits on. */
 define('TYPETAGS_STRIPE_COLOR', '#fff');
 /** A striped badge is mostly white, so its text is black whatever the group colour. */

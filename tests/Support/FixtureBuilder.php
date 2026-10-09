@@ -9,6 +9,9 @@
  */
 class FixtureBuilder
 {
+    /** session_idx of the activity rows seedTypedTagCreations() writes, so restore() finds them. */
+    private const ACTIVITY_MARKER = 'typetags-test-seed';
+
     private Db $db;
 
     /** image_id => list of tag_ids assigned before this fixture touched it */
@@ -292,6 +295,38 @@ SELECT t.id
         $this->db->query("UPDATE piwigo_user_cache SET need_update = 'true'");
     }
 
+    /**
+     * Records tags typed in by an account, as typetags.image.addNewTag records
+     * them in core's activity log, so a case can start at its daily allowance.
+     *
+     * @param int $minutesAgo when they were created
+     */
+    public function seedTypedTagCreations(string $username, int $count, int $minutesAgo = 0): void
+    {
+        $userId = (int)$this->db->scalar(
+            "SELECT id FROM piwigo_users WHERE username = '" . $this->db->escape($username) . "'"
+        );
+        if ($userId <= 0)
+        {
+            throw new RuntimeException("no account named $username");
+        }
+        $details = $this->db->escape(serialize(array('method' => 'typetags.image.addNewTag')));
+        for ($i = 0; $i < $count; $i++)
+        {
+            $this->db->query(
+                "INSERT INTO piwigo_activity (object, object_id, action, performed_by, session_idx, occured_on, details) " .
+                "VALUES ('tag', 0, 'add', $userId, '" . self::ACTIVITY_MARKER . "', NOW() - INTERVAL $minutesAgo MINUTE, '$details')"
+            );
+        }
+        $seeded = (int)$this->db->scalar(
+            "SELECT COUNT(*) FROM piwigo_activity WHERE session_idx = '" . self::ACTIVITY_MARKER . "' AND performed_by = $userId"
+        );
+        if ($seeded < $count)
+        {
+            throw new RuntimeException("only $seeded of $count activity rows were seeded");
+        }
+    }
+
     /** Links tags to a photo directly, for a case that starts from them. */
     public function givenAssigned(int $imageId, array $tagIds): void
     {
@@ -556,8 +591,11 @@ SELECT t.id
         {
             $this->db->query("DELETE FROM piwigo_image_tag WHERE tag_id = $tagId");
             $this->db->query("DELETE FROM piwigo_tags WHERE id = $tagId");
+            // a typed tag's creation counts against its account's daily allowance
+            $this->db->query("DELETE FROM piwigo_activity WHERE object = 'tag' AND object_id = $tagId");
         }
         $this->createdTagIds = array();
+        $this->db->query("DELETE FROM piwigo_activity WHERE session_idx = '" . self::ACTIVITY_MARKER . "'");
 
         foreach ($this->createdGroupIds as $groupId)
         {

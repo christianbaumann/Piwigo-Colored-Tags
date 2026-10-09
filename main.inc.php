@@ -398,10 +398,20 @@ function ws_typetags_image_addNewTag($params, &$service)
     return new PwgError(404, 'Image not found');
   }
 
+  if (typetags_typed_tags_today() >= TYPETAGS_NEW_TAGS_PER_DAY and !typetags_tag_exists($name))
+  {
+    return new PwgError(429, l10n('You have typed in too many new tags today'));
+  }
+
   include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
 
   list($max_tag_id) = pwg_db_fetch_row(pwg_query('SELECT MAX(id) FROM ' . TAGS_TABLE . ';'));
   $tag_id = (int)tag_id_from_tag_name(pwg_db_real_escape_string($name));
+  if ($tag_id > (int)$max_tag_id)
+  {
+    // also what typetags_typed_tags_today() counts
+    pwg_activity('tag', $tag_id, 'add');
+  }
 
   $query = '
 INSERT IGNORE INTO ' . IMAGE_TAG_TABLE . '
@@ -430,6 +440,46 @@ SELECT name FROM ' . TAGS_TABLE . '
       ),
     typetags_tag_badge($tag_id)
     );
+}
+
+/**
+ * How many tags the current account typed in on the picture page in the last
+ * 24 hours, from core's activity log, where pwg_activity() records the method.
+ * @return int
+ */
+function typetags_typed_tags_today()
+{
+  global $user;
+
+  $query = '
+SELECT COUNT(*)
+  FROM ' . ACTIVITY_TABLE . '
+  WHERE object = \'tag\'
+    AND action = \'add\'
+    AND performed_by = ' . (int)$user['id'] . '
+    AND occured_on > NOW() - INTERVAL 1 DAY
+    AND details LIKE \'%"typetags.image.addNewTag"%\'
+;';
+  list($count) = pwg_db_fetch_row(pwg_query($query));
+  return (int)$count;
+}
+
+/**
+ * Whether a tag of that name exists, found as core's tag_id_from_tag_name()
+ * looks first: by name, then by URL name.
+ * @param string $name cleaned, not escaped
+ * @return bool
+ */
+function typetags_tag_exists($name)
+{
+  $query = '
+SELECT id
+  FROM ' . TAGS_TABLE . '
+  WHERE name = \'' . pwg_db_real_escape_string($name) . '\'
+    OR url_name = \'' . pwg_db_real_escape_string(trigger_change('render_tag_url', $name)) . '\'
+  LIMIT 1
+;';
+  return pwg_db_num_rows(pwg_query($query)) > 0;
 }
 
 /**
