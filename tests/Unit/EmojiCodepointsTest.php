@@ -48,6 +48,21 @@ final class EmojiCodepointsTest extends TestCase
         $this->assertFalse(typetags_emoji_codepoints($eight . ' 1F600'));
     }
 
+    // [BVA] the surrogate range D800-DFFF is refused at both edges, its neighbours are not
+    public function testTheSurrogateRangeIsRefusedAtBothEdges(): void
+    {
+        $this->assertSame('D7FF', typetags_emoji_codepoints('D7FF'));
+        $this->assertFalse(typetags_emoji_codepoints('D800'));
+        $this->assertFalse(typetags_emoji_codepoints('DFFF'));
+        $this->assertSame('E000', typetags_emoji_codepoints('E000'));
+    }
+
+    // [ECP] pasted characters separated by blanks, as the docblock allows
+    public function testPastedCharactersSeparatedByBlanksAreNormalised(): void
+    {
+        $this->assertSame('1F5BC FE0F', typetags_emoji_codepoints("\u{1F5BC} \u{FE0F}"));
+    }
+
     // [NEG]
     public function testGarbageIsRefused(): void
     {
