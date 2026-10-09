@@ -19,6 +19,14 @@ class AdminPhotoPage {
     return this.page.locator(`.selectize-input .item[data-value="~~${tagId}~~"]`);
   }
 
+  /**
+   * Every element inside one chip. Selectize adds only its remove button;
+   * anything else came in with the tag's name.
+   */
+  chipChildren(/** @type {number} */ tagId) {
+    return this.chip(tagId).locator('*');
+  }
+
   async open(/** @type {number} */ imageId) {
     await this.page.goto(AdminPhotoPage.url(imageId));
     await this.page.waitForLoadState('domcontentloaded');

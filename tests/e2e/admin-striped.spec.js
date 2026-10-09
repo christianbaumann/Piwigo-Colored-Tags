@@ -33,6 +33,9 @@ test.describe('a striped group on the admin screens', () => {
     expect(chip.borderColor).toBe(colour);
     expect(chip.color).toBe(text);
     expect(chip.before).toBe(`"${fixture.striped_emoji}"`);
+    // the name itself is plain: a badge inside would draw the emoji and stripes twice
+    await expect(photo.chipChildren(tagId)).toHaveCount(1);
+    await expect(photo.chipChildren(tagId)).toHaveClass(/\bremove\b/);
   });
 
   test('the tags screen paints the striped dot and swatch', async ({ page }) => {
