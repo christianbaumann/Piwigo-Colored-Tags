@@ -62,9 +62,9 @@ SELECT
 
 function typetags_admin_prefilter($content)
 {
-  // add form part
+  // add form part, included rather than pasted in so an edit reaches the compiled page (Piwigo decision 0036)
   $search[0] = '<div class="tag-pagination">';
-  $replace[0] = file_get_contents(realpath(TYPETAGS_PATH . 'template/tags.tpl')) . $search[0];
+  $replace[0] = "{include file='" . realpath(TYPETAGS_PATH . 'template/tags.tpl') . "'}" . $search[0];
 
   // add button
   $search[1] = '<button id="DeleteSelectionMode"';
