@@ -195,6 +195,7 @@ function typetags_picture_prefilter($content)
   <input type="text" name="tag_name" placeholder="{\'Type a new tag\'|@translate}" aria-label="{\'Type a new tag\'|@translate}">
   <button type="submit">{\'Add the tag\'|@translate}</button>
   <span class="typetags-new-tag-error" style="color:#c00;margin-left:8px;" hidden></span>
+  <span class="typetags-tag-warning" style="color:#c00;margin-left:8px;" hidden></span>
 </form>
 {/if}
 ';
@@ -255,6 +256,17 @@ function typetags_picture_prefilter($content)
     {rdelim}
   {rdelim}
 
+  // The tag is saved either way; a plugin writing tags into the photo file
+  // (photoinfo) says when that write failed, and the next change clears it
+  function showTagWrite(result) {ldelim}
+    var warning = jQuery("#typetags-new-tag .typetags-tag-warning");
+    if (result && result.tags_written === false) {ldelim}
+      warning.text(result.tags_message_l10n).prop("hidden", false);
+    {rdelim} else {ldelim}
+      warning.text("").prop("hidden", true);
+    {rdelim}
+  {rdelim}
+
   // Add "x" buttons inside assigned colored tag badges
   jQuery("#Tags a[data-tag-id]").each(function() {ldelim}
     var tagId = parseInt(jQuery(this).data("tag-id"));
@@ -284,6 +296,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
+          showTagWrite(data.result);
           appendToTagsRow(tagLink(tagId, String(tagName), tagStyle, tagEmoji));
 
           // Remove from unassigned list
@@ -325,6 +338,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
+          showTagWrite(data.result);
           // Find the tag link (x button is now inside it)
           var assignedLink = el.closest("a[data-tag-id]");
           var tagName = "";
@@ -418,6 +432,7 @@ function typetags_picture_prefilter($content)
         {rdelim}
 
         var tag = data.result;
+        showTagWrite(tag);
         if (jQuery("#Tags dd a[data-tag-id=\'" + tag.tag_id + "\']").length === 0) {ldelim}
           appendToTagsRow(tagLink(tag.tag_id, tag.name, tag.style, tag.emoji_html));
           if (tag.style) {ldelim}
