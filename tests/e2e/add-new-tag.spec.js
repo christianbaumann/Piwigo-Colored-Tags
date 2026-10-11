@@ -93,21 +93,3 @@ test.describe('a normal account types a new tag', () => {
     await expect(picture.newTagButton).toBeEnabled();
   });
 });
-
-test.describe('a guest', () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
-
-  test.afterEach(async () => {
-    restore();
-  });
-
-  test('gets no field', async ({ page }) => {
-    const fixture = seed('no-tags');
-    const picture = new PicturePage(page);
-    await picture.gotoFixture(fixture);
-
-    // Anti-vacuity: the guest really is on the photo's page.
-    await expect(page).toHaveURL(new RegExp(`/picture\\.php\\?/${fixture.image_id}/`));
-    await expect(picture.newTagForm).toHaveCount(0);
-  });
-});

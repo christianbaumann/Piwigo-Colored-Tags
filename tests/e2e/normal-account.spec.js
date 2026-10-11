@@ -19,8 +19,8 @@ const { seed, restore } = require('./support/seed');
  * a future change made these methods admin_only, nothing here would have gone
  * red and the handbook would be quietly wrong for most of its readers.
  *
- * The guest half is not restated: edge-cases and the plugin's own integration
- * suite already cover a guest getting no UI.
+ * There is no guest half: the fork locks guests out of every gallery page
+ * (its decision 0055), which its provenance suite asserts.
  */
 test.describe('a normal account on the picture page', () => {
   test.use({ storageState: path.join(__dirname, '.state', 'auth-normal.json') });

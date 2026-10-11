@@ -195,19 +195,4 @@ final class PicturePageSourceTest extends TestCase
         $this->assertMarkupSurvivedStripping($html);
         $this->assertSame('', $this->tagsSection($html));
     }
-
-    // ── Guests ────────────────────────────────────────────────────────────
-
-    /** [NEG] */
-    public function testGuestSeesNoAssignmentUi(): void
-    {
-        $this->fixtures->someAssignedSomeUnassigned($this->imageId);
-
-        $res = $this->ws->fetchPage($this->picturePath, false);
-
-        $this->assertSame(200, $res['http_code']);
-        $this->assertStringNotContainsString('Fatal error', $res['body']);
-        $this->assertStringNotContainsString('typetags-unassigned', $res['body']);
-        $this->assertStringNotContainsString('typetag-add', $res['body']);
-    }
 }

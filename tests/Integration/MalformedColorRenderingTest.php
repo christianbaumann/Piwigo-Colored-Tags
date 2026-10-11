@@ -71,11 +71,6 @@ final class MalformedColorRenderingTest extends TestCase
         $this->assertStringNotContainsString('Smarty Compiler', $res['body'], "$context: Smarty compiler error");
     }
 
-    public function testGuestPicturePageRendersWithMalformedColor(): void
-    {
-        $this->assertPageIsHealthy($this->ws->fetchPage(self::PICTURE_PATH, false), 'guest');
-    }
-
     public function testLoggedInPicturePageRendersWithMalformedColor(): void
     {
         // The logged-in path is the one that runs typetags_picture_tags(),
