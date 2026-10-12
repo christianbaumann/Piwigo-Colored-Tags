@@ -22,8 +22,8 @@ use PHPUnit\Framework\TestCase;
  * changes the database anyway, or a control on one page and not on the other,
  * is INCONSISTENT, never a pass.
  *
- * typetags.groups is "see*" for normal and generic in the matrix: they see the
- * read-only page index.php?/taggroups, which this probe reads as see.
+ * `see*` is `see` reached only through the read-only page index.php?/taggroups
+ * (decision 0064), with no read method: typetags.groups for normal and generic.
  *
  * The dimensions that combine with role (private album, grant, the daily cap)
  * stay in the feature files, VisibilityTest and CreationCapTest.
@@ -73,7 +73,7 @@ final class RoleMatrixTest extends TestCase
             ),
         'typetags.groups' => array(
             'methods' => array('typetags.type.list', 'typetags.type.add', 'typetags.type.update', 'typetags.tags.setType'),
-            'levels' => array('guest' => 'none', 'generic' => 'see', 'normal' => 'see', 'admin' => 'edit', 'webmaster' => 'edit'),
+            'levels' => array('guest' => 'none', 'generic' => 'see*', 'normal' => 'see*', 'admin' => 'edit', 'webmaster' => 'edit'),
             ),
         'typetags.admin-chips' => array(
             'methods' => array(),
@@ -153,7 +153,14 @@ final class RoleMatrixTest extends TestCase
             'typetags.admin-chips' => $this->probeAdminChips($role),
         };
 
-        $this->assertSame($expected, self::level($parts), "$function as $role");
+        $observed = self::level($parts);
+        if ($function === 'typetags.groups' and $observed === 'see')
+        {
+            // The groups' only content is the read-only page (0064).
+            $observed = 'see*';
+        }
+
+        $this->assertSame($expected, $observed, "$function as $role");
     }
 
     /**
