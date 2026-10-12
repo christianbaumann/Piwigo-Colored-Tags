@@ -273,11 +273,22 @@ SELECT t.id
         $this->db->query("UPDATE piwigo_categories SET status = 'private' WHERE id = $albumId");
         $this->db->query("DELETE FROM piwigo_user_access WHERE cat_id = $albumId");
         $this->db->query("DELETE FROM piwigo_group_access WHERE cat_id = $albumId");
-        $this->db->query("UPDATE piwigo_user_cache SET need_update = 'true'");
+        $this->invalidateUserCache();
         if ($this->db->scalar("SELECT status FROM piwigo_categories WHERE id = $albumId") !== 'private')
         {
             throw new RuntimeException("album $albumId did not become private");
         }
+    }
+
+    /**
+     * Throws every account's cached permissions and tag counts away. Core keys
+     * its cache of visible tags (get_available_tags()) on the time the user
+     * cache was computed, so a tag linked behind its back stays unlisted
+     * until that cache is rebuilt, which core does on the next request.
+     */
+    public function invalidateUserCache(): void
+    {
+        $this->db->query("UPDATE piwigo_user_cache SET need_update = 'true'");
     }
 
     /** Grants one account the throwaway photo's private album. */

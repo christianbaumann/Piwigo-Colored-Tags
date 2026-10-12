@@ -32,3 +32,5 @@ $lang['Striped'] = 'Gestreift';
 $lang['tab striped in the color and white, at the left edge'] = 'Streifen in der Farbe und Weiß am linken Rand';
 $lang['Emoji'] = 'Emoji';
 $lang['paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none'] = 'Emoji einfügen oder Code Points eingeben, z. B. 1F5BC FE0F; leer für keines';
+$lang['Tag groups'] = 'Schlagwort-Gruppen';
+$lang['No visible tag'] = 'Kein sichtbares Schlagwort';

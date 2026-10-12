@@ -15,6 +15,9 @@ final class TemplateContractTest extends TestCase
     /** Lower bound against a scan that reads nothing. Measured 2026-08-28: 331 lines. */
     private const MIN_TEMPLATE_BYTES = 1000;
 
+    /** Lower bound for tags.tpl. Measured 2026-10-12: 1758 bytes. */
+    private const MIN_TAGS_TEMPLATE_BYTES = 1000;
+
     private function pictureTemplate(): string
     {
         return file_get_contents(PIWIGO_ROOT . 'themes/default/template/picture.tpl');
@@ -32,6 +35,14 @@ final class TemplateContractTest extends TestCase
         // modus declares parent=default (themes/modus/themeconf.inc.php:12).
         // A modus-owned picture.tpl would shadow the parent and break both replacements.
         $this->assertFileDoesNotExist(PIWIGO_ROOT . 'themes/modus/template/picture.tpl');
+    }
+
+    public function testTagsTemplateStillContainsTheGroupLinkTarget(): void
+    {
+        $src = file_get_contents(PIWIGO_ROOT . 'themes/default/template/tags.tpl');
+        $this->assertGreaterThan(self::MIN_TAGS_TEMPLATE_BYTES, strlen($src));
+        $this->assertSame(1, substr_count($src, TYPETAGS_TPL_TAGS_LINK_POINT));
+        $this->assertFileDoesNotExist(PIWIGO_ROOT . 'themes/modus/template/tags.tpl');
     }
 
     public function testGuardFixtureIsNotVacuous(): void

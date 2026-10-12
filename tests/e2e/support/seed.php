@@ -15,6 +15,7 @@
  * Usage:
  *   php tests/e2e/support/seed.php --scenario=all-assigned --image=1
  *   php tests/e2e/support/seed.php --scenario=no-tags --with-striped-group
+ *   php tests/e2e/support/seed.php --scenario=no-tags --with-striped-group --assign-striped
  *   php tests/e2e/support/seed.php --restore
  *   php tests/e2e/support/seed.php --delete-typetag=<name>
  *   php tests/e2e/support/seed.php --track-tag=<name>
@@ -198,6 +199,18 @@ $striped_group = isset($args['with-striped-group']) ? $builder->createStripedGro
 
 $method = SCENARIOS[$scenario];
 $result = $builder->$method($imageId);
+
+// The striped tag on the photo, so the group page lists it: that page shows only tags on visible photos.
+if (isset($args['assign-striped']))
+{
+    if ($striped_group === null)
+    {
+        fail('--assign-striped needs --with-striped-group');
+    }
+    $builder->givenAssigned($imageId, array($striped_group['tag_id']));
+    $builder->invalidateUserCache();
+    $result['assigned'][] = $striped_group['tag_id'];
+}
 
 save_snapshot($builder->exportState());
 

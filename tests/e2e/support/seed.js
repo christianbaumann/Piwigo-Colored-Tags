@@ -15,15 +15,19 @@ const SEED_SCRIPT = path.join(__dirname, 'seed.php');
  * @param {'some-assigned'|'all-assigned'|'all-but-one-assigned'|'no-tags'|'only-non-colored'|'colored-and-plain'} scenario
  * @param {number|null} imageId null for the suite's own throwaway photo; never a real photo, whose
  *   file plugins/photoinfo rewrites on every tag change
- * @param {{stripedGroup?: boolean}} options stripedGroup adds a striped colour group with an emoji and one tag in it
+ * @param {{stripedGroup?: boolean, assignStriped?: boolean}} options stripedGroup adds a striped colour group with an
+ *   emoji and one tag in it; assignStriped also puts that tag on the photo
  */
-function seed(scenario, imageId = null, { stripedGroup = false } = {}) {
+function seed(scenario, imageId = null, { stripedGroup = false, assignStriped = false } = {}) {
   const args = [SEED_SCRIPT, `--scenario=${scenario}`];
   if (imageId !== null) {
     args.push(`--image=${imageId}`);
   }
   if (stripedGroup) {
     args.push('--with-striped-group');
+  }
+  if (assignStriped) {
+    args.push('--assign-striped');
   }
   const stdout = execFileSync('php', args, { encoding: 'utf8' });
   return JSON.parse(stdout);

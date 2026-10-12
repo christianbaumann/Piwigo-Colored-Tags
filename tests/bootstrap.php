@@ -5,6 +5,7 @@ define('TYPETAGS_PATH', dirname(__DIR__) . '/');
 define('PIWIGO_ROOT', dirname(dirname(dirname(__DIR__))) . '/');
 require_once TYPETAGS_PATH . 'include/functions.inc.php';
 require_once TYPETAGS_PATH . 'include/events_public.inc.php';
+require_once TYPETAGS_PATH . 'include/taggroups.inc.php';
 
 // Integration-layer support classes (no Piwigo core needed — they talk to
 // ws.php over HTTP and to MariaDB directly).

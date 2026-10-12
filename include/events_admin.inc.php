@@ -18,15 +18,9 @@ function typetags_admin()
   load_language('plugin.lang', TYPETAGS_PATH);
 
   // add tag colors to template
-  $query = 'SELECT * FROM ' . TYPETAGS_TABLE . ' ORDER BY name;';
-  $result = pwg_query($query);
-
-  while ($row = pwg_db_fetch_assoc($result))
+  foreach (typetags_groups() as $group)
   {
-    $row['color_text'] = typetags_text_color($row['color'], $row['striped']);
-    $row['swatch'] = typetags_swatch($row['color'], $row['striped']);
-    $row['emoji_html'] = typetags_emoji_html($row['emoji']);
-    $template->append('typetags', $row);
+    $template->append('typetags', $group);
   }
 
   $query = '

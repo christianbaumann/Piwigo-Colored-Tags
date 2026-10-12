@@ -284,6 +284,56 @@ function get_color_text($color)
 }
 
 /**
+ * The colour groups, ordered by name, each with what a page needs to show it.
+ *
+ * @return array rows of the group table plus color_text, swatch, emoji_html and badge_style
+ */
+function typetags_groups()
+{
+  $query = 'SELECT * FROM ' . TYPETAGS_TABLE . ' ORDER BY name;';
+  $groups = query2array($query);
+
+  foreach ($groups as &$group)
+  {
+    $group['color_text'] = typetags_text_color($group['color'], $group['striped']);
+    $group['swatch'] = typetags_swatch($group['color'], $group['striped']);
+    $group['emoji_html'] = typetags_emoji_html($group['emoji']);
+    $group['badge_style'] = typetags_badge_style($group['color'], $group['striped']);
+  }
+  unset($group);
+
+  return $groups;
+}
+
+/**
+ * Hands each group its tags. A tag in no group, or in a group not listed, is
+ * left out; the tags keep the order they came in.
+ *
+ * @param array $groups rows with id
+ * @param array $tags rows with id_typetags
+ * @return array the groups, each with a 'tags' list
+ */
+function typetags_groups_with_tags($groups, $tags)
+{
+  $by_group = array();
+  foreach ($tags as $tag)
+  {
+    if (!empty($tag['id_typetags']))
+    {
+      $by_group[ $tag['id_typetags'] ][] = $tag;
+    }
+  }
+
+  foreach ($groups as &$group)
+  {
+    $group['tags'] = $by_group[ $group['id'] ] ?? array();
+  }
+  unset($group);
+
+  return $groups;
+}
+
+/**
  * Split colored tags into unassigned (with text colour, style and emoji) and
  * assigned ids.
  *

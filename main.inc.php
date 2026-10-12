@@ -30,6 +30,7 @@ define('TYPETAGS_ADMIN',  get_root_url().'admin.php?page=plugin-typetags');
 
 include_once(TYPETAGS_PATH . 'include/events_public.inc.php');
 include_once(TYPETAGS_PATH . 'include/functions.inc.php');
+include_once(TYPETAGS_PATH . 'include/taggroups.inc.php');
 
 $conf['TypeTags'] = safe_unserialize($conf['TypeTags']);
 
@@ -48,6 +49,10 @@ if ($conf['TypeTags']['show_all'] and script_basename() != 'tags')
 
 // tags on tags page
 add_event_handler('loc_end_tags', 'typetags_tags');
+add_event_handler('loc_end_tags', 'typetags_tags_link');
+
+// read-only page of the colour groups, index.php?/taggroups
+add_event_handler('loc_end_section_init', 'typetags_taggroups_section');
 
 // escape keywords meta
 add_event_handler('loc_begin_page_header', 'typetags_escape');

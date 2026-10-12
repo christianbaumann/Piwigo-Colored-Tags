@@ -25,5 +25,7 @@ $lang['Striped'] = 'Striped';
 $lang['tab striped in the color and white, at the left edge'] = 'tab striped in the color and white, at the left edge';
 $lang['Emoji'] = 'Emoji';
 $lang['paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none'] = 'paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none';
+$lang['Tag groups'] = 'Tag groups';
+$lang['No visible tag'] = 'No visible tag';
 
 ?>
