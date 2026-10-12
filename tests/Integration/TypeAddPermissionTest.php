@@ -69,23 +69,6 @@ final class TypeAddPermissionTest extends TestCase
 
     // ── Access control ────────────────────────────────────────────────────
 
-    /** [NEG] */
-    public function testAnAnonymousCallerIsRefused(): void
-    {
-        $name = $this->uniqueName('anon_post');
-
-        // Third argument false suppresses the cookie jar, so this call carries
-        // no session even though $this->ws is logged in (AddTagTest:109).
-        $res = $this->ws->call('typetags.type.add', array(
-            'typetag_name' => $name,
-            'typetag_color' => 'AABBCC',
-        ), false);
-
-        $this->assertSame('fail', $res['json']['stat'], 'Got: ' . $res['body']);
-        $this->assertSame(401, $res['json']['err']);
-        $this->assertSame(0, $this->countRows($name));
-    }
-
     /**
      * [NEG] [ECP] The hole was reachable over GET, so the verb is its own
      * equivalence class. callGet() takes no $useCookies argument, so the
@@ -104,53 +87,6 @@ final class TypeAddPermissionTest extends TestCase
         $this->assertSame('fail', $res['json']['stat'], 'Got: ' . $res['body']);
         $this->assertSame(401, $res['json']['err']);
         $this->assertSame(0, $this->countRows($name));
-    }
-
-    /**
-     * [NEG] [ECP] An admin gate is only proven by an authenticated non-admin
-     * meeting it. Each WsClient owns its own cookie jar, so this is a second
-     * client rather than a re-login of the first.
-     */
-    public function testAnAuthenticatedNonAdminIsRefused(): void
-    {
-        $name = $this->uniqueName('normal');
-        $normal = new WsClient();
-        $normal->login(Config::normalUsername(), Config::normalPassword());
-
-        try
-        {
-            $res = $normal->call('typetags.type.add', array(
-                'typetag_name' => $name,
-                'typetag_color' => 'AABBCC',
-            ));
-        }
-        finally
-        {
-            $normal->logout();
-        }
-
-        $this->assertSame('fail', $res['json']['stat'], 'Got: ' . $res['body']);
-        $this->assertSame(401, $res['json']['err']);
-        $this->assertSame(0, $this->countRows($name));
-    }
-
-    /**
-     * [HAPPY] The only legitimate caller is an administrator on admin/tags.php.
-     * Without this case the three [NEG] ones above would pass against a method
-     * that refuses everybody.
-     */
-    public function testTheWebmasterCanStillCreateAColour(): void
-    {
-        $name = $this->uniqueName('webmaster');
-        $this->assertSame(0, $this->countRows($name), 'precondition: colour does not exist');
-
-        $res = $this->ws->call('typetags.type.add', array(
-            'typetag_name' => $name,
-            'typetag_color' => 'AABBCC',
-        ));
-
-        $this->assertSame('ok', $res['json']['stat'], 'Got: ' . $res['body']);
-        $this->assertSame(1, $this->countRows($name));
     }
 
     // ── Name length ───────────────────────────────────────────────────────

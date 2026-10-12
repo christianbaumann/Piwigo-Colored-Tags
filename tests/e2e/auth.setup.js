@@ -7,6 +7,16 @@ const AUTH_FILE = path.join(__dirname, '.state', 'auth.json');
 const NORMAL_AUTH_FILE = path.join(__dirname, '.state', 'auth-normal.json');
 
 /**
+ * The two roles the role matrix adds (roles.spec.js): an administrator who is
+ * not a webmaster, and core's generic status, which a gate written as
+ * is_classic_user() would refuse while it still admits normal.
+ */
+const ROLE_AUTH_FILES = {
+  ADMIN: path.join(__dirname, '.state', 'auth-admin.json'),
+  GENERIC: path.join(__dirname, '.state', 'auth-generic.json'),
+};
+
+/**
  * Logs in once and saves the session, because the assignment UI is only
  * rendered for authenticated users (typetags_picture_tags() returns early for
  * a guest). Credentials come from the environment, never from this file — the
@@ -70,3 +80,28 @@ setup('authenticate as a normal account', async ({ page }) => {
   fs.mkdirSync(path.dirname(NORMAL_AUTH_FILE), { recursive: true });
   await page.context().storageState({ path: NORMAL_AUTH_FILE });
 });
+
+for (const [role, file] of Object.entries(ROLE_AUTH_FILES)) {
+  setup(`authenticate as the ${role.toLowerCase()} account`, async ({ page }) => {
+    const username = process.env[`TYPETAGS_TEST_${role}_USERNAME`];
+    const password = process.env[`TYPETAGS_TEST_${role}_PASSWORD`];
+
+    if (!username || !password) {
+      throw new Error(
+        `Missing TYPETAGS_TEST_${role}_USERNAME / TYPETAGS_TEST_${role}_PASSWORD. ` +
+          'Run `ddev exec php plugins/typetags/tests/Support/create-test-users.php` to create the ' +
+          'test accounts, then source local/config/typetags-test.env before running the E2E suite.'
+      );
+    }
+
+    await page.goto('/identification.php');
+    await page.fill('input[name="username"]', username);
+    await page.fill('input[name="password"]', password);
+    await page.click('input[name="login"]');
+
+    await expect(page.locator('input[name="username"]')).toHaveCount(0);
+
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    await page.context().storageState({ path: file });
+  });
+}

@@ -67,6 +67,22 @@ final class CreationCapTest extends TestCase
         $this->assertSame(0, $this->tagCount($this->typedName()));
     }
 
+    /**
+     * [BVA][ECP] The cap is the account's, whatever its role: a webmaster at
+     * the allowance is refused one more as well, and no tag is created.
+     */
+    public function testAWebmasterAtTheCapIsRefusedOneMore(): void
+    {
+        $this->ws->logout();
+        $this->ws->login(Config::username(), Config::password());
+        $this->fixtures->seedTypedTagCreations(Config::username(), TYPETAGS_NEW_TAGS_PER_DAY);
+
+        $res = $this->addNewTag($this->typedName());
+
+        $this->assertSame(429, $res['json']['err'] ?? null, 'Got: ' . $res['body']);
+        $this->assertSame(0, $this->tagCount($this->typedName()));
+    }
+
     /** [ECP] At the cap an existing name is still linked: nothing is created. */
     public function testAnExistingNameIsStillLinkedAtTheCap(): void
     {

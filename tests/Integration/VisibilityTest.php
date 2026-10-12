@@ -1,4 +1,5 @@
 <?php
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -8,6 +9,10 @@ use PHPUnit\Framework\TestCase;
  * holds for administrators too: a private album needs a grant.
  *
  * Requirement: plan 2026-10-09 "Tags in the image file", owner's answer Q17.
+ *
+ * Every case runs once per logged-in role. The public album is the role
+ * matrix's (RoleMatrixTest); private and private-with-a-grant are the
+ * boundaries this file adds to it.
  */
 final class VisibilityTest extends TestCase
 {
@@ -44,10 +49,11 @@ final class VisibilityTest extends TestCase
         $this->ws->logout();
     }
 
-    /** [NEG] A normal account cannot add a tag to a photo it cannot see. */
-    public function testAddTagRefusesAPhotoTheAccountCannotSee(): void
+    /** [NEG][BVA] An account cannot add a tag to a photo it cannot see, an administrator included. */
+    #[DataProvider('accounts')]
+    public function testAddTagRefusesAPhotoTheAccountCannotSee(string $account): void
     {
-        $this->loginNormal();
+        $this->login($account);
 
         $res = $this->call('typetags.image.addTag', array('tag_id' => $this->coloredTagId));
 
@@ -56,10 +62,11 @@ final class VisibilityTest extends TestCase
     }
 
     /** [NEG] Nor remove one. */
-    public function testRemoveTagRefusesAPhotoTheAccountCannotSee(): void
+    #[DataProvider('accounts')]
+    public function testRemoveTagRefusesAPhotoTheAccountCannotSee(string $account): void
     {
         $this->fixtures->givenAssigned($this->imageId, array($this->coloredTagId));
-        $this->loginNormal();
+        $this->login($account);
 
         $res = $this->call('typetags.image.removeTag', array('tag_id' => $this->coloredTagId));
 
@@ -68,9 +75,10 @@ final class VisibilityTest extends TestCase
     }
 
     /** [NEG] Nor type a new one, which would also create the tag. */
-    public function testAddNewTagRefusesAPhotoTheAccountCannotSee(): void
+    #[DataProvider('accounts')]
+    public function testAddNewTagRefusesAPhotoTheAccountCannotSee(string $account): void
     {
-        $this->loginNormal();
+        $this->login($account);
 
         $res = $this->call('typetags.image.addNewTag', array('tag_name' => $this->typedName()));
 
@@ -80,20 +88,33 @@ final class VisibilityTest extends TestCase
         ));
     }
 
-    /** [ECP] The same account, once granted the album, tags the photo. */
-    public function testAnAccountGrantedTheAlbumTagsThePhoto(): void
+    /** [BVA] The same account, once granted the album, tags the photo. */
+    #[DataProvider('accounts')]
+    public function testAnAccountGrantedTheAlbumTagsThePhoto(string $account): void
     {
-        $this->fixtures->grantTestAlbumTo(Config::normalUsername());
-        $this->loginNormal();
+        $this->fixtures->grantTestAlbumTo($account);
+        $this->login($account);
 
         $this->assertSame('ok', $this->call('typetags.image.addTag', array('tag_id' => $this->coloredTagId))['json']['stat'] ?? null);
         $this->assertSame('ok', $this->call('typetags.image.addNewTag', array('tag_name' => $this->typedName()))['json']['stat'] ?? null);
         $this->assertSame('ok', $this->call('typetags.image.removeTag', array('tag_id' => $this->coloredTagId))['json']['stat'] ?? null);
     }
 
-    private function loginNormal(): void
+    /** Every logged-in role; the guest is refused before visibility matters (RoleMatrixTest). */
+    public static function accounts(): array
     {
-        $this->ws->login(Config::normalUsername(), Config::normalPassword());
+        return array(
+            'generic' => array('typetags_generic'),
+            'normal' => array('typetags_normal'),
+            'admin' => array('typetags_admin'),
+            'webmaster' => array('typetags_webmaster'),
+            );
+    }
+
+    private function login(string $account): void
+    {
+        list($username, $password) = Config::account($account);
+        $this->ws->login($username, $password);
     }
 
     private function typedName(): string

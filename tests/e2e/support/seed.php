@@ -16,6 +16,7 @@
  *   php tests/e2e/support/seed.php --scenario=all-assigned --image=1
  *   php tests/e2e/support/seed.php --scenario=no-tags --with-striped-group
  *   php tests/e2e/support/seed.php --scenario=no-tags --with-striped-group --assign-striped
+ *   php tests/e2e/support/seed.php --scenario=some-assigned --read-only
  *   php tests/e2e/support/seed.php --restore
  *   php tests/e2e/support/seed.php --delete-typetag=<name>
  *   php tests/e2e/support/seed.php --track-tag=<name>
@@ -210,6 +211,16 @@ if (isset($args['assign-striped']))
     $builder->givenAssigned($imageId, array($striped_group['tag_id']));
     $builder->invalidateUserCache();
     $result['assigned'][] = $striped_group['tag_id'];
+}
+
+// The file read-only, so plugins/photoinfo's tag write fails and the page shows its warning.
+if (isset($args['read-only']))
+{
+    if (isset($args['image']))
+    {
+        fail('--read-only locks the throwaway photo only, never --image');
+    }
+    $builder->makeTestImageReadOnly();
 }
 
 save_snapshot($builder->exportState());

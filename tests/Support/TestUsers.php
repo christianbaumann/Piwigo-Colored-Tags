@@ -8,9 +8,15 @@
  *
  * Roles, and why each exists:
  *   webmaster - pwg.plugins.performAction, which PluginActivationTest drives
+ *   admin     - an administrator who is not a webmaster: RoleMatrixTest's
+ *               Admin column, which sees the admin screens and calls the
+ *               admin_only methods
  *   normal    - the permission model decision 0005 records: tag assignment is
  *               open to every logged-in user, and only an authenticated
  *               non-admin passing the gate can show that
+ *   generic   - core's shared-account status: it passes ACCESS_GUEST only, so
+ *               a gate written as is_classic_user() instead of !is_a_guest()
+ *               would refuse it while normal still passes
  *
  * The `guest` account ships with Piwigo and is not created here.
  */
@@ -19,7 +25,9 @@ class TestUsers
     /** username => Piwigo status */
     public const ROLES = array(
         'typetags_webmaster' => 'webmaster',
+        'typetags_admin'     => 'admin',
         'typetags_normal'    => 'normal',
+        'typetags_generic'   => 'generic',
         );
 
     /** Written by create-test-users.php, read by Config, git-ignored under local/. */

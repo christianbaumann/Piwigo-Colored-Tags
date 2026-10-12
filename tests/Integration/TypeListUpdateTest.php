@@ -77,23 +77,6 @@ final class TypeListUpdateTest extends TestCase
         );
     }
 
-    /** [NEG] */
-    public function testListRefusesANormalAccountAndAGuest(): void
-    {
-        $normal = new WsClient();
-        $normal->login(Config::normalUsername(), Config::normalPassword());
-        try
-        {
-            $this->assertSame(401, $normal->call('typetags.type.list')['json']['err']);
-        }
-        finally
-        {
-            $normal->logout();
-        }
-
-        $this->assertSame(401, $this->ws->call('typetags.type.list', array(), false)['json']['err']);
-    }
-
     // ── update ────────────────────────────────────────────────────────────
 
     /** [HAPPY] */
@@ -164,27 +147,6 @@ final class TypeListUpdateTest extends TestCase
         ));
 
         $this->assertSame('fail', $res['json']['stat']);
-        $this->assertUnchanged();
-    }
-
-    /** [NEG] */
-    public function testUpdateRefusesANormalAccount(): void
-    {
-        $normal = new WsClient();
-        $normal->login(Config::normalUsername(), Config::normalPassword());
-        try
-        {
-            $res = $normal->call('typetags.type.update', array(
-                'typetag_id' => $this->groupId,
-                'typetag_color' => 'd00000',
-                'pwg_token' => $normal->token(),
-            ));
-            $this->assertSame(401, $res['json']['err']);
-        }
-        finally
-        {
-            $normal->logout();
-        }
         $this->assertUnchanged();
     }
 

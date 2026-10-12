@@ -15,10 +15,11 @@ const SEED_SCRIPT = path.join(__dirname, 'seed.php');
  * @param {'some-assigned'|'all-assigned'|'all-but-one-assigned'|'no-tags'|'only-non-colored'|'colored-and-plain'} scenario
  * @param {number|null} imageId null for the suite's own throwaway photo; never a real photo, whose
  *   file plugins/photoinfo rewrites on every tag change
- * @param {{stripedGroup?: boolean, assignStriped?: boolean}} options stripedGroup adds a striped colour group with an
- *   emoji and one tag in it; assignStriped also puts that tag on the photo
+ * @param {{stripedGroup?: boolean, assignStriped?: boolean, readOnly?: boolean}} options stripedGroup adds a striped
+ *   colour group with an emoji and one tag in it; assignStriped also puts that tag on the photo; readOnly makes the
+ *   throwaway photo's file read-only, so the tag write into it fails
  */
-function seed(scenario, imageId = null, { stripedGroup = false, assignStriped = false } = {}) {
+function seed(scenario, imageId = null, { stripedGroup = false, assignStriped = false, readOnly = false } = {}) {
   const args = [SEED_SCRIPT, `--scenario=${scenario}`];
   if (imageId !== null) {
     args.push(`--image=${imageId}`);
@@ -28,6 +29,9 @@ function seed(scenario, imageId = null, { stripedGroup = false, assignStriped = 
   }
   if (assignStriped) {
     args.push('--assign-striped');
+  }
+  if (readOnly) {
+    args.push('--read-only');
   }
   const stdout = execFileSync('php', args, { encoding: 'utf8' });
   return JSON.parse(stdout);

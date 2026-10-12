@@ -359,6 +359,47 @@ SELECT t.id
         return (int)$id;
     }
 
+    /**
+     * The colour group of that name, if the server created one while a test
+     * ran, so restore() removes it.
+     */
+    public function trackGroupNamed(string $name): ?int
+    {
+        $id = $this->db->scalar("SELECT id FROM piwigo_typetags WHERE name = '" . $this->db->escape($name) . "'");
+        if ($id === null)
+        {
+            return null;
+        }
+        $this->createdGroupIds[] = (int)$id;
+        return (int)$id;
+    }
+
+    /**
+     * Makes the throwaway photo's file read-only, so plugins/photoinfo's tag
+     * write fails while the database change is kept, as photoinfo's own
+     * TagWriteTest forces it. restore() deletes the file, which the directory
+     * still allows.
+     */
+    public function makeTestImageReadOnly(): void
+    {
+        if ($this->testImage === null)
+        {
+            throw new RuntimeException('no throwaway photo to lock; call testImageId() first');
+        }
+        chmod($this->testImage['file'], 0444);
+        clearstatcache();
+        if (is_writable($this->testImage['file']))
+        {
+            throw new RuntimeException('the throwaway photo did not become read-only');
+        }
+    }
+
+    /** Whether a plugin is active on this install, as piwigo_plugins records it. */
+    public function pluginIsActive(string $id): bool
+    {
+        return $this->db->scalar("SELECT state FROM piwigo_plugins WHERE id = '" . $this->db->escape($id) . "'") === 'active';
+    }
+
     public function ensurePlainTagId(): int
     {
         $existing = $this->db->scalar('SELECT id FROM piwigo_tags WHERE id_typetags IS NULL LIMIT 1');

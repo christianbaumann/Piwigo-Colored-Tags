@@ -106,20 +106,6 @@ final class AddTagTest extends TestCase
     // ── Access control ────────────────────────────────────────────────────
 
     /** [NEG] */
-    public function testGuestIsRejected(): void
-    {
-        $res = $this->ws->call('typetags.image.addTag', array(
-            'image_id' => $this->imageId,
-            'tag_id' => $this->coloredTagId,
-            'pwg_token' => 'fake',
-        ), false);
-
-        $this->assertSame('fail', $res['json']['stat'], 'Got: ' . $res['body']);
-        $this->assertSame(401, $res['json']['err']);
-        $this->assertSame(0, $this->assignmentCount($this->imageId, $this->coloredTagId));
-    }
-
-    /** [NEG] */
     public function testBadTokenIsRejected(): void
     {
         $res = $this->addTag(array('pwg_token' => 'wrong_token_value'));

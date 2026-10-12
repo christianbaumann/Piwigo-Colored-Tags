@@ -26,6 +26,8 @@ class PicturePage {
     this.newTagField = this.newTagForm.locator('input[name="tag_name"]');
     this.newTagButton = this.newTagForm.locator('button[type="submit"]');
     this.newTagError = this.newTagForm.locator('.typetags-new-tag-error');
+    this.tagWarning = this.newTagForm.locator('.typetags-tag-warning');
+    this.loginField = page.locator('input[name="username"]');
     this.markupInTagsRow = page.locator('#Tags dd b, #Tags dd i, #Tags dd script');
   }
 
@@ -55,6 +57,20 @@ class PicturePage {
   async reload() {
     await this.page.reload();
     await this.page.waitForLoadState('domcontentloaded');
+  }
+
+  /**
+   * Clicks a + badge and returns the answer of typetags.image.addTag.
+   *
+   * @param {number|string} tagId
+   * @returns {Promise<any>}
+   */
+  async clickAddBadge(tagId) {
+    const answer = this.page.waitForResponse(
+      (r) => r.url().includes('ws.php') && (r.request().postData() || '').includes('typetags.image.addTag')
+    );
+    await this.addBadge(tagId).click();
+    return (await answer).json();
   }
 
   /** @param {number} tagId */

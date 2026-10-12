@@ -64,6 +64,18 @@ class Config
         return self::required(TestUsers::envVars('typetags_normal')[1]);
     }
 
+    /**
+     * Username and password of any account in TestUsers::ROLES, for the
+     * suites that run one case per role (RoleMatrixTest).
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function account(string $username): array
+    {
+        list($userVar, $passVar) = TestUsers::envVars($username);
+        return array(self::required($userVar), self::required($passVar));
+    }
+
     private static function required(string $envVar): string
     {
         $value = getenv($envVar);

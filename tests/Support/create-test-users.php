@@ -61,7 +61,7 @@ foreach (TestUsers::ROLES as $username => $status)
         $db->query("UPDATE piwigo_users SET password = '" . $db->escape($hash) . "' WHERE id = $userId");
     }
 
-    $level = $status === 'webmaster' ? 8 : 0;
+    $level = in_array($status, array('webmaster', 'admin'), true) ? 8 : 0;
 
     $hasInfos = $db->scalar("SELECT user_id FROM piwigo_user_infos WHERE user_id = $userId");
     if ($hasInfos === null)
@@ -93,10 +93,10 @@ foreach (TestUsers::ROLES as $username => $status)
     }
 
     // Assert the state took effect rather than trusting the writes above.
-    $actual = $db->scalar("SELECT status FROM piwigo_user_infos WHERE user_id = $userId");
-    if ($actual !== $status)
+    $actual = $db->scalar("SELECT CONCAT(status, '/', level) FROM piwigo_user_infos WHERE user_id = $userId");
+    if ($actual !== "$status/$level")
     {
-        fwrite(STDERR, "Failed to give $username status $status (got: " . var_export($actual, true) . ")\n");
+        fwrite(STDERR, "Failed to give $username status $status, level $level (got: " . var_export($actual, true) . ")\n");
         exit(1);
     }
 

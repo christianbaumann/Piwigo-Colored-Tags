@@ -59,7 +59,10 @@ final class SchemaUpgradeTest extends TestCase
         $rowsBefore = (int)$this->db->scalar('SELECT COUNT(*) FROM piwigo_typetags');
         $this->assertGreaterThan(0, $rowsBefore, 'the upgrade must run over existing groups');
 
-        $this->db->query('ALTER TABLE piwigo_typetags DROP COLUMN striped, DROP COLUMN emoji');
+        // ALGORITHM=COPY rebuilds the table. MariaDB's instant DROP COLUMN keeps the
+        // dropped column in the row format, so after enough runs a further DROP
+        // failed with "Row size too large" (2026-10-12).
+        $this->db->query('ALTER TABLE piwigo_typetags DROP COLUMN striped, DROP COLUMN emoji, ALGORITHM=COPY');
         $this->assertSame(array('id', 'name', 'color'), $this->columns());
 
         $this->loadAPage();

@@ -93,22 +93,6 @@ final class RemoveTagTest extends TestCase
     // ── Access control ────────────────────────────────────────────────────
 
     /** [NEG] */
-    public function testGuestIsRejected(): void
-    {
-        $this->givenTagIsAssigned();
-
-        $res = $this->ws->call('typetags.image.removeTag', array(
-            'image_id' => $this->imageId,
-            'tag_id' => $this->coloredTagId,
-            'pwg_token' => 'fake',
-        ), false);
-
-        $this->assertSame('fail', $res['json']['stat'], 'Got: ' . $res['body']);
-        $this->assertSame(401, $res['json']['err']);
-        $this->assertSame(1, $this->assignmentCount($this->coloredTagId), 'a rejected call must not delete');
-    }
-
-    /** [NEG] */
     public function testBadTokenIsRejected(): void
     {
         $this->givenTagIsAssigned();

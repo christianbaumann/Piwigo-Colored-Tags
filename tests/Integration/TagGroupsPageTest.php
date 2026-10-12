@@ -105,15 +105,6 @@ final class TagGroupsPageTest extends TestCase
         }
     }
 
-    /** [NEG] A guest lands on the login page. */
-    public function testAGuestIsSentToTheLoginPage(): void
-    {
-        $res = $this->ws->fetchPage(self::PAGE, false);
-
-        $this->assertStringContainsString('identification.php', (string)$res['url']);
-        $this->assertStringNotContainsString('id="typetags-groups"', (string)$res['body']);
-    }
-
     /** [HAPPY] The page and the tags page's link to it read German. */
     public function testTheTagsPageLinksToThePageInGerman(): void
     {
