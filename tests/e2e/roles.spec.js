@@ -29,7 +29,7 @@ for (const { role, storageState } of ROLES) {
       restore();
     });
 
-    test('typetags.assign-remove: the + badge adds a tag and its x takes it off', async ({ page }) => {
+    test(`${role === 'generic' ? '[ECP]' : '[HAPPY]'} typetags.assign-remove: the + badge adds a tag and its x takes it off`, async ({ page }) => {
       const fixture = seed('some-assigned');
       // Anti-vacuity: with nothing unassigned there is no badge to click.
       expect(fixture.unassigned_colored_count).toBeGreaterThan(0);
@@ -50,7 +50,7 @@ for (const { role, storageState } of ROLES) {
       await expect(picture.addBadge(tagId)).toHaveCount(1);
     });
 
-    test('typetags.write-warning: a tag not written into the file shows the reason', async ({ page }) => {
+    test(`${role === 'generic' ? '[ECP]' : '[HAPPY]'} typetags.write-warning: a tag not written into the file shows the reason`, async ({ page }) => {
       const fixture = seed('some-assigned', null, { readOnly: true });
       expect(fixture.unassigned_colored_count).toBeGreaterThan(0);
 
@@ -78,7 +78,7 @@ test.describe('the picture page as a guest', () => {
     restore();
   });
 
-  test('typetags.assign-remove and write-warning: the login page instead', async ({ page }) => {
+  test('[NEG] typetags.assign-remove and write-warning: the login page instead', async ({ page }) => {
     const fixture = seed('some-assigned');
     expect(fixture.unassigned_colored_count).toBeGreaterThan(0);
 

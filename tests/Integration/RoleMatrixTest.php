@@ -81,15 +81,6 @@ final class RoleMatrixTest extends TestCase
             ),
         );
 
-    /** Which technique each role's row applies; a function's neighbouring roles are its boundaries. */
-    private const TAGS = array(
-        'guest' => '[NEG][BVA]',
-        'generic' => '[ECP][BVA]',
-        'normal' => '[HAPPY][BVA]',
-        'admin' => '[HAPPY][BVA]',
-        'webmaster' => '[HAPPY]',
-        );
-
     /** A colour the fixture group never has, for typetags.type.update. */
     private const UPDATED_COLOR = '#0a0b0c';
 
@@ -126,14 +117,33 @@ final class RoleMatrixTest extends TestCase
         self::$clients = array();
     }
 
+    /**
+     * One row per cell. Technique: [NEG] guest; [ECP] generic, the equivalence
+     * class of normal; [BVA] a role whose level differs from the role before it;
+     * [HAPPY] every other row.
+     */
     public static function matrixRows(): array
     {
         $rows = array();
         foreach (self::MATRIX as $function => $row)
         {
+            $previous = null;
             foreach ($row['levels'] as $role => $level)
             {
-                $rows[self::TAGS[$role] . " $function as $role"] = array($function, $role, $level);
+                if ($role === self::GUEST)
+                {
+                    $tag = '[NEG]';
+                }
+                elseif ($role === 'generic')
+                {
+                    $tag = '[ECP]';
+                }
+                else
+                {
+                    $tag = $level !== $previous ? '[BVA]' : '[HAPPY]';
+                }
+                $previous = $level;
+                $rows["$tag $function as $role"] = array($function, $role, $level);
             }
         }
         return $rows;
