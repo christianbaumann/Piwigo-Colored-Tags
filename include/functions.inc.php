@@ -11,6 +11,20 @@ define('TYPETAGS_NAME_MAX_LENGTH', 255);
 // are smallint unsigned, so creation open to every account needs a bound.
 define('TYPETAGS_NEW_TAGS_PER_DAY', 255);
 
+/**
+ * The activity rows that count against TYPETAGS_NEW_TAGS_PER_DAY, for any
+ * account: tags typed in through the picture page in the last 24 hours, where
+ * pwg_activity() records the method.
+ * @return string an SQL condition on the activity table
+ */
+function typetags_typed_tags_condition()
+{
+  return 'object = \'tag\'
+    AND action = \'add\'
+    AND occured_on > NOW() - INTERVAL 1 DAY
+    AND details LIKE \'%"typetags.image.addNewTag"%\'';
+}
+
 /** The second colour of a striped group's tab, and the background it sits on. */
 define('TYPETAGS_STRIPE_COLOR', '#fff');
 /** A striped badge is mostly white, so its text is black whatever the group colour. */

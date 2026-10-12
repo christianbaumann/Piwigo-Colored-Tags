@@ -41,14 +41,6 @@ final class RoleMatrixTest extends TestCase
 
     private const GUEST = 'guest';
 
-    /** role => account, in the column order of the matrix; the guest has none */
-    private const ROLES = array(
-        self::GUEST => null,
-        'generic' => 'typetags_generic',
-        'normal' => 'typetags_normal',
-        'admin' => 'typetags_admin',
-        'webmaster' => 'typetags_webmaster',
-        );
 
     /**
      * The target matrix: function => (ws methods its probe calls, level per role).
@@ -245,8 +237,8 @@ final class RoleMatrixTest extends TestCase
         $imageId = $this->photoWith(array());
         if ($role !== self::GUEST)
         {
-            $this->assertLessThan(TYPETAGS_NEW_TAGS_PER_DAY, $this->typedTagsToday(self::ROLES[$role]),
-                'precondition: ' . self::ROLES[$role] . ' is below the daily cap');
+            $this->assertLessThan(TYPETAGS_NEW_TAGS_PER_DAY, $this->typedTagsToday(self::account($role)),
+                'precondition: ' . self::account($role) . ' is below the daily cap');
         }
         $page = $this->picturePage($role, $imageId);
 
@@ -388,7 +380,7 @@ final class RoleMatrixTest extends TestCase
             $client = new WsClient();
             if ($role !== self::GUEST)
             {
-                list($username, $password) = Config::account(self::ROLES[$role]);
+                list($username, $password) = Config::account(self::account($role));
                 $client->login($username, $password);
             }
             self::$clients[$role] = $client;
@@ -464,12 +456,20 @@ final class RoleMatrixTest extends TestCase
     {
         return (int)$this->db->scalar("
 SELECT COUNT(*)
-  FROM piwigo_activity AS a
-    INNER JOIN piwigo_users AS u ON u.id = a.performed_by
-  WHERE u.username = '" . $this->db->escape($username) . "'
-    AND a.object = 'tag' AND a.action = 'add'
-    AND a.occured_on > NOW() - INTERVAL 1 DAY
-    AND a.details LIKE '%\"typetags.image.addNewTag\"%'");
+  FROM piwigo_activity
+  WHERE performed_by = (SELECT id FROM piwigo_users WHERE username = '" . $this->db->escape($username) . "')
+    AND " . typetags_typed_tags_condition());
+    }
+
+    /** The test account of a logged-in role, as TestUsers declares it. */
+    private static function account(string $role): string
+    {
+        $username = array_search($role, TestUsers::ROLES, true);
+        if ($username === false)
+        {
+            throw new LogicException("TestUsers declares no account for the role $role");
+        }
+        return $username;
     }
 
     private function fixtureName(string $what): string

@@ -459,11 +459,8 @@ function typetags_typed_tags_today()
   $query = '
 SELECT COUNT(*)
   FROM ' . ACTIVITY_TABLE . '
-  WHERE object = \'tag\'
-    AND action = \'add\'
-    AND performed_by = ' . (int)$user['id'] . '
-    AND occured_on > NOW() - INTERVAL 1 DAY
-    AND details LIKE \'%"typetags.image.addNewTag"%\'
+  WHERE performed_by = ' . (int)$user['id'] . '
+    AND ' . typetags_typed_tags_condition() . '
 ;';
   list($count) = pwg_db_fetch_row(pwg_query($query));
   return (int)$count;
