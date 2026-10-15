@@ -398,9 +398,11 @@ function ws_typetags_image_addNewTag($params, &$service)
     return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid tag name'));
   }
 
+  // administrators included: the field is only on the picture page, which needs an album
+  // (docs/agents/decisions/0070)
   if (!typetags_image_visible($params['image_id']))
   {
-    return new PwgError(404, 'Image not found');
+    return new PwgError(404, l10n('Photo is in no visible album'));
   }
 
   if (typetags_typed_tags_today() >= TYPETAGS_NEW_TAGS_PER_DAY and !typetags_tag_exists($name))

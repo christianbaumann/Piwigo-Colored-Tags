@@ -281,6 +281,36 @@ final class AddNewTagTest extends TestCase
         $this->assertSame(0, $this->tagCount($name));
     }
 
+    /**
+     * [NEG] A photo in no album is refused with its reason, for a webmaster too:
+     * the field only exists on the picture page, which needs an album
+     * (docs/agents/decisions/0070). The expected text is the German override,
+     * read from the file, since the webmaster's language must be German.
+     */
+    public function testAPhotoInNoAlbumIsRefusedWithTheReasonEvenForAWebmaster(): void
+    {
+        $this->ws->logout();
+        $this->ws->login(Config::username(), Config::password());
+        $this->assertSame('de_DE', (string)$this->db->scalar(
+            "SELECT language FROM piwigo_user_infos ui JOIN piwigo_users u ON u.id = ui.user_id WHERE u.username = '"
+            . $this->db->escape(Config::username()) . "'"));
+        $lang = array();
+        include PIWIGO_ROOT . 'local/language/de_DE.lang.php';
+        $expected = $lang['Photo is in no visible album'] ?? '';
+        $this->assertNotSame('', $expected, 'anti-vacuity: the German override is missing');
+
+        $this->db->query('DELETE FROM piwigo_image_category WHERE image_id = ' . $this->imageId);
+        $this->assertSame(0, (int)$this->db->scalar('SELECT COUNT(*) FROM piwigo_image_category WHERE image_id = ' . $this->imageId),
+            'the photo must be in no album');
+        $name = $this->newName('Kirmes');
+
+        $res = $this->addNewTag($name);
+
+        $this->assertRefused($res, 404);
+        $this->assertSame($expected, $res['json']['message'] ?? null);
+        $this->assertSame(0, $this->tagCount($name));
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────
 
     /** A name unique to this run, removed again in tearDown. */

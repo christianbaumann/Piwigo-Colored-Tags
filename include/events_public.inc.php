@@ -11,11 +11,10 @@ function typetags_render($tag_name, $tag=array())
 {
   global $pwg_loaded_plugins, $page, $typetags_cache;
 
-  // the admin tag list feeds the same tag fields, whose chips typetags_chip_css() paints;
-  // the admin tag screen puts a renamed tag's answered name into its box and edit field
+  // the admin tag fields' chips are painted by typetags_chip_css(); a ws.php answer carries
+  // the plain name, for API clients and for the admin screens that put it into a chip or a box
   if ((defined('IN_ADMIN') and in_array($page['page'], array('photo', 'batch_manager', 'tags')))
-    or (script_basename() == 'ws' and isset($_REQUEST['method'])
-      and in_array($_REQUEST['method'], array('pwg.tags.getAdminList', 'pwg.tags.rename'), true)))
+    or script_basename() == 'ws')
   {
     return $tag_name;
   }
