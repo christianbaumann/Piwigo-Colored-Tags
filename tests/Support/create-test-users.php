@@ -19,6 +19,13 @@
  * It writes user rows directly and is never safe against a production database.
  */
 
+// Opened in a browser it would hand out accounts to whoever asked.
+if (PHP_SAPI !== 'cli')
+{
+    http_response_code(403);
+    exit;
+}
+
 require_once __DIR__ . '/Config.php';
 require_once __DIR__ . '/Db.php';
 require_once __DIR__ . '/TestUsers.php';
