@@ -392,7 +392,7 @@ function ws_typetags_image_addNewTag($params, &$service)
   }
 
   // Cleaned as core cleans a name typed into its tag fields (get_tag_ids()).
-  $name = trim(strip_tags(stripslashes($params['tag_name'])));
+  $name = typetags_nfc(trim(strip_tags(stripslashes($params['tag_name']))));
   if (!typetags_typed_tag_name_is_valid($name))
   {
     return new PwgError(WS_ERR_INVALID_PARAM, l10n('Invalid tag name'));
@@ -405,17 +405,22 @@ function ws_typetags_image_addNewTag($params, &$service)
     return new PwgError(404, l10n('Photo is in no visible album'));
   }
 
-  if (typetags_typed_tags_today() >= TYPETAGS_NEW_TAGS_PER_DAY and !typetags_tag_exists($name))
+  $tag_id = typetags_tag_id_named($name);
+  $created = ($tag_id == 0);
+  if ($created and typetags_typed_tags_today() >= TYPETAGS_NEW_TAGS_PER_DAY)
   {
     return new PwgError(429, l10n('You have typed in too many new tags today'));
   }
 
-  include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
-
-  list($max_tag_id) = pwg_db_fetch_row(pwg_query('SELECT MAX(id) FROM ' . TAGS_TABLE . ';'));
-  $tag_id = (int)tag_id_from_tag_name(pwg_db_real_escape_string($name));
-  if ($tag_id > (int)$max_tag_id)
+  if ($created)
   {
+    include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
+    $creation = create_tag(pwg_db_real_escape_string($name));
+    if (!isset($creation['id']))
+    {
+      return new PwgError(500, l10n('The tag was not saved'));
+    }
+    $tag_id = (int)$creation['id'];
     // also what typetags_typed_tags_today() counts
     pwg_activity('tag', $tag_id, 'add');
   }
@@ -443,7 +448,7 @@ SELECT name FROM ' . TAGS_TABLE . '
     array(
       'tag_id' => $tag_id,
       'name' => $stored_name,
-      'created' => $tag_id > (int)$max_tag_id,
+      'created' => $created,
       ),
     typetags_tag_badge($tag_id)
     );
@@ -469,21 +474,23 @@ SELECT COUNT(*)
 }
 
 /**
- * Whether a tag of that name exists, found as core's tag_id_from_tag_name()
- * looks first: by name, then by URL name.
- * @param string $name cleaned, not escaped
- * @return bool
+ * The tag a typed name stands for: matched by name only, under the column's
+ * collation, so case and accent variants find the stored tag. Never by URL
+ * name, which would give `Name ?` for `Name`.
+ * @param string $name cleaned and NFC, not escaped
+ * @return int 0 when no tag has that name
  */
-function typetags_tag_exists($name)
+function typetags_tag_id_named($name)
 {
   $query = '
 SELECT id
   FROM ' . TAGS_TABLE . '
   WHERE name = \'' . pwg_db_real_escape_string($name) . '\'
-    OR url_name = \'' . pwg_db_real_escape_string(trigger_change('render_tag_url', $name)) . '\'
+  ORDER BY id
   LIMIT 1
 ;';
-  return pwg_db_num_rows(pwg_query($query)) > 0;
+  $row = pwg_db_fetch_row(pwg_query($query));
+  return empty($row) ? 0 : (int)$row[0];
 }
 
 /**

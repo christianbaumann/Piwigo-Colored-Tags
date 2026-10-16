@@ -260,6 +260,7 @@ echo json_encode(array(
     'unassigned_colored_count' => count($colored) - count($assignedColored),
     'colored_total' => count($colored),
     'striped_tag_id' => $striped_group['tag_id'] ?? null,
+    'striped_tag_name' => $striped_group ? FixtureBuilder::STRIPED_TAG_NAME : null,
     'striped_group_id' => $striped_group['group_id'] ?? null,
     // the fixture group's emoji as the characters a browser shows
     'striped_emoji' => $striped_group ? html_entity_decode(typetags_emoji_html(FixtureBuilder::STRIPED_GROUP_EMOJI), ENT_HTML5, 'UTF-8') : null,

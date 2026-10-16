@@ -34,6 +34,7 @@ class FixtureBuilder
 
     public const STRIPED_GROUP_COLOR = '#d00000';
     public const STRIPED_GROUP_EMOJI = '270D FE0F';
+    public const STRIPED_TAG_NAME = '_fixture_striped_tag';
 
     public function __construct(Db $db)
     {
@@ -140,7 +141,7 @@ SELECT t.id
         $this->createdGroupIds[] = $groupId;
 
         $this->db->query("INSERT INTO piwigo_tags (name, url_name, id_typetags)
-            VALUES ('_fixture_striped_tag', '_fixture_striped_tag', $groupId)");
+            VALUES ('" . self::STRIPED_TAG_NAME . "', '" . self::STRIPED_TAG_NAME . "', $groupId)");
         $tagId = $this->db->insertId();
         $this->createdTagIds[] = $tagId;
 

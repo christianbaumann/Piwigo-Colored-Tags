@@ -92,4 +92,20 @@ test.describe('a normal account types a new tag', () => {
     await expect(picture.newTagField).toHaveValue(name);
     await expect(picture.newTagButton).toBeEnabled();
   });
+
+  test('a name the server calls equal shows the stored tag, not the typed text', async ({ page }) => {
+    const fixture = seed('no-tags', null, { stripedGroup: true });
+    const stored = fixture.striped_tag_name;
+    const typed = stored.toUpperCase();
+    expect(typed).not.toBe(stored);
+    const picture = new PicturePage(page);
+    await picture.gotoFixture(fixture);
+
+    await picture.addNewTag(typed);
+
+    await expect(picture.assignedTag(fixture.striped_tag_id)).toHaveCount(1);
+    const names = await picture.assignedNames();
+    expect(names).toContain(stored);
+    expect(names).not.toContain(typed);
+  });
 });

@@ -25,6 +25,24 @@ function typetags_typed_tags_condition()
     AND details LIKE \'%"typetags.image.addNewTag"%\'';
 }
 
+/**
+ * A typed tag name in Unicode normal form C, so a name typed decomposed
+ * (a + U+0308) finds the tag stored composed. Unchanged where PHP has no
+ * intl extension, and for bytes that are not UTF-8, which the name check
+ * refuses afterwards.
+ * @param string $name
+ * @return string
+ */
+function typetags_nfc($name)
+{
+  if (!class_exists('Normalizer'))
+  {
+    return $name;
+  }
+  $normalized = Normalizer::normalize($name, Normalizer::FORM_C);
+  return $normalized === false ? $name : $normalized;
+}
+
 /** The second colour of a striped group's tab, and the background it sits on. */
 define('TYPETAGS_STRIPE_COLOR', '#fff');
 /** A striped badge is mostly white, so its text is black whatever the group colour. */
