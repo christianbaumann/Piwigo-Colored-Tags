@@ -123,6 +123,7 @@ final class PluginActivationTest extends TestCase
         );
 
         $res = $this->ws->call('typetags.tags.setType', array(
+            'pwg_token' => $this->ws->token(),
             'tag_id' => array($tagId),
             'typetag_id' => $typetagId,
         ));
@@ -142,6 +143,7 @@ final class PluginActivationTest extends TestCase
         $typetagId = (int)$this->db->scalar('SELECT id FROM piwigo_typetags ORDER BY id LIMIT 1');
 
         $this->ws->call('typetags.tags.setType', array(
+            'pwg_token' => $this->ws->token(),
             'tag_id' => array($tagId),
             'typetag_id' => $typetagId,
         ));
@@ -152,6 +154,7 @@ final class PluginActivationTest extends TestCase
         );
 
         $res = $this->ws->call('typetags.tags.setType', array(
+            'pwg_token' => $this->ws->token(),
             'tag_id' => array($tagId),
             'typetag_id' => 0,
         ));
@@ -171,6 +174,7 @@ final class PluginActivationTest extends TestCase
 
         $this->ws->logout();
         $res = $this->ws->call('typetags.tags.setType', array(
+            'pwg_token' => $this->ws->token(),
             'tag_id' => array($tagId),
             'typetag_id' => $typetagId,
         ));

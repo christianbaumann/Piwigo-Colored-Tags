@@ -5,6 +5,12 @@ load_language('plugin.lang', TYPETAGS_PATH);
 
 include_once(TYPETAGS_PATH . 'include/functions.inc.php');
 
+// every write on this page is a POST carrying the token, so a forged link or form cannot reach one
+if (isset($_POST['edittypetag']) or isset($_POST['deletetypetag']) or isset($_POST['addtypetag']) or isset($_POST['save_config']))
+{
+  check_pwg_token();
+}
+
 
 // +-----------------------------------------------------------------------+
 // |                                edit typetags                          |
@@ -86,25 +92,27 @@ UPDATE '.TYPETAGS_TABLE.'
 // +-----------------------------------------------------------------------+
 // |                           delete typetags                             |
 // +-----------------------------------------------------------------------+
-if (isset($_GET['deletetypetag']))
+if (isset($_POST['deletetypetag']))
 {
+  $deleted_id = intval($_POST['deletetypetag']);
+
   $query = '
 SELECT id
   FROM ' . TAGS_TABLE . '
-  WHERE id_typetags = ' . intval($_GET['deletetypetag']) . '
+  WHERE id_typetags = ' . $deleted_id . '
 ;';
   $regrouped_tag_ids = query2array($query, null, 'id');
 
   $query = '
 UPDATE ' . TAGS_TABLE . '
   SET id_typetags = NULL
-  WHERE id_typetags = ' . intval($_GET['deletetypetag']) . '
+  WHERE id_typetags = ' . $deleted_id . '
 ;';
   pwg_query($query);
 
   $query = '
 DELETE FROM ' . TYPETAGS_TABLE . '
-  WHERE id = ' . intval($_GET['deletetypetag']) . '
+  WHERE id = ' . $deleted_id . '
 ;';
   pwg_query($query);
 
@@ -205,6 +213,7 @@ $template->assign('SHOW_ALL', $conf['TypeTags']['show_all']);
 // +-----------------------------------------------------------------------+
 $template->assign('TYPETAGS_PATH', TYPETAGS_PATH);
 $template->assign('F_ACTION', TYPETAGS_ADMIN);
+$template->assign('PWG_TOKEN', get_pwg_token());
 
 // get all typetags
 $query = 'SELECT * FROM ' . TYPETAGS_TABLE . ' ORDER BY name;';
@@ -215,7 +224,6 @@ while ($row = pwg_db_fetch_assoc($result))
   $row['colors'] = typetags_badge_colors($row['color'], $row['striped']);
   $row['label'] = typetags_badge_label($row['name'], $row['emoji']);
   $row['u_edit'] = TYPETAGS_ADMIN . '&amp;edittypetag=' . $row['id'];
-  $row['u_delete'] = TYPETAGS_ADMIN . '&amp;deletetypetag=' . $row['id'];
 
   $template->append('typetags', $row);
 }

@@ -37,7 +37,7 @@ final class AdminFormTest extends TestCase
 
     private function post(array $fields): string
     {
-        $res = $this->ws->postPage(self::PAGE, $fields);
+        $res = $this->ws->postPage(self::PAGE, $fields + array('pwg_token' => $this->ws->token()));
         $this->assertSame(200, $res['http_code']);
         return $res['body'];
     }

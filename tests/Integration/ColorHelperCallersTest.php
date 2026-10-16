@@ -49,6 +49,7 @@ final class ColorHelperCallersTest extends TestCase
     public function testTypeAddReturnsContrastColour(): void
     {
         $res = $this->ws->call('typetags.type.add', array(
+            'pwg_token' => $this->ws->token(),
             'typetag_name' => self::FIXTURE_TYPE_NAME,
             'typetag_color' => 'AABBCC',
         ));

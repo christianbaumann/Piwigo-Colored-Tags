@@ -71,9 +71,7 @@ test.describe('the colour controls on the tag administration screen', () => {
  * This is the browser half of the typetags.type.add gate. The integration suite
  * proves the method refuses anonymous and non-admin callers and accepts the
  * webmaster; only a browser can prove the admin screen's own request still gets
- * through with the session it carries. Gating the method too tightly - by
- * pwg_token as well, say - would leave every integration case green and break
- * exactly this path, because tags.js:228-247 sends no token.
+ * through with the session and the pwg_token it carries.
  */
 test.describe('creating a colour on the tag administration screen', () => {
   const FIXTURE_NAME = '_test_e2e_colour_creation';

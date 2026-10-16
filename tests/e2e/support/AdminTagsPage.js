@@ -41,6 +41,38 @@ class AdminTagsPage {
     // addColorOption() appends a clone of it, so a colour created in the
     // browser is one more of these and nothing else on the page changes.
     this.colorOptions = page.locator('.color-option-container .color-option');
+
+    // "Schlagwort-Farben festlegen" and what it reports (tags.tpl, .typetags-actions).
+    this.validateButton = page.locator('#TypetagsValidate');
+    this.saveMessage = page.locator('.typetags-actions .typetag-message');
+    this.saveError = page.locator('.typetags-actions .typetag-error');
+
+    this.searchField = page.locator('#search-tag .search-input');
+  }
+
+  /** One tag in the list, by id. */
+  tagBox(/** @type {number} */ tagId) {
+    return this.page.locator(`.tag-box[data-id="${tagId}"]`);
+  }
+
+  /** Narrow the list to one name, so a tag past the first page can be selected. */
+  async search(/** @type {string} */ name) {
+    await this.searchField.fill(name);
+  }
+
+  /** In selection mode, select one tag of the list. */
+  async selectTag(/** @type {number} */ tagId) {
+    await this.tagBox(tagId).locator('.tag-name').click();
+  }
+
+  /** Pick a group in the open colour panel; 'n' is "Remove color". */
+  async chooseColor(/** @type {number|string} */ id) {
+    await this.colorOption(id).locator('label').click();
+  }
+
+  /** Press "Schlagwort-Farben festlegen". */
+  async validateColor() {
+    await this.validateButton.click();
   }
 
   /** The round sample of one group in the colour panel. */

@@ -70,18 +70,20 @@ final class TypeAddPermissionTest extends TestCase
     // ── Access control ────────────────────────────────────────────────────
 
     /**
-     * [NEG] [ECP] The hole was reachable over GET, so the verb is its own
-     * equivalence class. callGet() takes no $useCookies argument, so the
-     * anonymous session comes from a fresh client that never logs in.
+     * [NEG] An anonymous caller with everything a browser session has: POST
+     * and its own token. Only admin_only is left to refuse it (GET and a
+     * missing token are CsrfTest's). The session comes from a fresh client
+     * that never logs in.
      */
-    public function testAnAnonymousGetIsRefused(): void
+    public function testAnAnonymousPostWithTokenIsRefused(): void
     {
-        $name = $this->uniqueName('anon_get');
+        $name = $this->uniqueName('anon_post');
         $anonymous = new WsClient();
 
-        $res = $anonymous->callGet('typetags.type.add', array(
+        $res = $anonymous->call('typetags.type.add', array(
             'typetag_name' => $name,
             'typetag_color' => 'AABBCC',
+            'pwg_token' => $anonymous->token(),
         ));
 
         $this->assertSame('fail', $res['json']['stat'], 'Got: ' . $res['body']);
@@ -97,6 +99,7 @@ final class TypeAddPermissionTest extends TestCase
         $name = $this->nameOfLength(256);
 
         $res = $this->ws->call('typetags.type.add', array(
+            'pwg_token' => $this->ws->token(),
             'typetag_name' => $name,
             'typetag_color' => 'AABBCC',
         ));
@@ -119,6 +122,7 @@ final class TypeAddPermissionTest extends TestCase
         $this->assertSame(0, $this->countRows($name), 'precondition: colour does not exist');
 
         $res = $this->ws->call('typetags.type.add', array(
+            'pwg_token' => $this->ws->token(),
             'typetag_name' => $name,
             'typetag_color' => 'AABBCC',
         ));
@@ -135,6 +139,7 @@ final class TypeAddPermissionTest extends TestCase
         $name = $this->uniqueName('bad_colour');
 
         $res = $this->ws->call('typetags.type.add', array(
+            'pwg_token' => $this->ws->token(),
             'typetag_name' => $name,
             'typetag_color' => 'ZZZZZZ',
         ));

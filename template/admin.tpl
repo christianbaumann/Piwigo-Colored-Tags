@@ -12,6 +12,7 @@ jQuery('#colorpicker').farbtastic('#hexval');
 </div>
 
 <form action="{$F_ACTION}" method="post" name="form">
+  <input type="hidden" name="pwg_token" value="{$PWG_TOKEN}">
   <fieldset>
   {if isset($IN_EDIT)}
     <legend>{'Edit color'|translate}</legend>
@@ -57,7 +58,11 @@ jQuery('#colorpicker').farbtastic('#hexval');
     <li style="{$typetag.colors}{if $typetag.striped}padding-left:24px;{/if}">
       <span class="buttons">
         <a href="{$typetag.u_edit}" title="{'edit'|translate}"><img src="{$ROOT_URL}{$themeconf.admin_icon_dir}/edit_s.png" class="button" alt="{'edit'|translate}"></a>
-        <a href="{$typetag.u_delete}" title="{'delete'|translate}" onclick="return confirm('{'Are you sure?'|translate}');"><img src="{$ROOT_URL}{$themeconf.admin_icon_dir}/delete.png" class="button" alt="{'delete'|translate}"></a>
+        <form action="{$F_ACTION}" method="post" style="display:inline" onsubmit="return confirm('{'Are you sure?'|translate|escape:javascript}');">
+          <input type="hidden" name="pwg_token" value="{$PWG_TOKEN}">
+          <input type="hidden" name="deletetypetag" value="{$typetag.id}">
+          <input type="image" src="{$ROOT_URL}{$themeconf.admin_icon_dir}/delete.png" class="button" alt="{'delete'|translate}" title="{'delete'|translate}">
+        </form>
       </span>
       {$typetag.label}
     </li>
@@ -70,6 +75,7 @@ jQuery('#colorpicker').farbtastic('#hexval');
 
 
 <form action="{$F_ACTION}" method="post" name="form">
+  <input type="hidden" name="pwg_token" value="{$PWG_TOKEN}">
   <fieldset>
     <legend>{'Configuration'|translate}</legend>
 

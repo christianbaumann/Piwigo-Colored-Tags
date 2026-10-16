@@ -175,6 +175,7 @@ final class TypeListUpdateTest extends TestCase
     public function testAddStoresStripesAndEmoji(): void
     {
         $res = $this->ws->call('typetags.type.add', array(
+            'pwg_token' => $this->ws->token(),
             'typetag_name' => self::FIXTURE_PREFIX . 'added',
             'typetag_color' => 'd00000',
             'striped' => 'true',
@@ -192,6 +193,7 @@ final class TypeListUpdateTest extends TestCase
     public function testAddWithoutTheNewParametersIsPlain(): void
     {
         $res = $this->ws->call('typetags.type.add', array(
+            'pwg_token' => $this->ws->token(),
             'typetag_name' => self::FIXTURE_PREFIX . 'plain',
             'typetag_color' => '77A600',
         ));
@@ -205,6 +207,7 @@ final class TypeListUpdateTest extends TestCase
     public function testAddRefusesAnInvalidEmoji(): void
     {
         $res = $this->ws->call('typetags.type.add', array(
+            'pwg_token' => $this->ws->token(),
             'typetag_name' => self::FIXTURE_PREFIX . 'bad_emoji',
             'typetag_color' => 'd00000',
             'emoji' => '110000',

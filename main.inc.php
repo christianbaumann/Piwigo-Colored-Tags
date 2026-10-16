@@ -78,11 +78,12 @@ function typetags_add_methods($arr)
     'ws_typetags_tags_setType',
     array(
       'tag_id' => array('type' => WS_TYPE_ID, 'flags'=>WS_PARAM_FORCE_ARRAY),
-      'typetag_id' => array('info' => 'Zero (0) for remove color')
+      'typetag_id' => array('type' => WS_TYPE_INT, 'info' => 'Zero (0) for remove color'),
+      'pwg_token' => array(),
       ),
     'Set/remove color for a list of tags',
     null,
-    array('admin_only'=>true)
+    array('admin_only'=>true, 'post_only'=>true)
   );
 
   $service->addMethod(
@@ -93,10 +94,11 @@ function typetags_add_methods($arr)
       'typetag_color' => array('info' => 'In format RRVVBB (Example : FF0000 for red)'),
       'striped' => array('default' => false, 'type' => WS_TYPE_BOOL),
       'emoji' => array('default' => '', 'info' => 'The emoji, or its code points (Example : 1F5BC FE0F)'),
+      'pwg_token' => array(),
       ),
     'Create a tag color',
     null,
-    array('admin_only'=>true)
+    array('admin_only'=>true, 'post_only'=>true)
   );
 
   $service->addMethod(
@@ -169,9 +171,15 @@ function typetags_add_methods($arr)
  */
 function ws_typetags_tags_setType($params, &$service) 
 {
+  if (get_pwg_token() != $params['pwg_token'])
+  {
+    return new PwgError(403, 'Invalid security token');
+  }
+
+  $typetag_id = (int)$params['typetag_id'];
 $query = '
 UPDATE ' . TAGS_TABLE . '
-  SET id_typetags = ' . ($params['typetag_id']!=0 ? $params['typetag_id'] : 'NULL') . '
+  SET id_typetags = ' . ($typetag_id != 0 ? $typetag_id : 'NULL') . '
   WHERE id IN ('.implode(',', $params['tag_id']).')
 ;';
   pwg_query($query);
@@ -188,6 +196,11 @@ UPDATE ' . TAGS_TABLE . '
  */
 function ws_typetags_type_add($params, &$service) 
 {
+  if (get_pwg_token() != $params['pwg_token'])
+  {
+    return new PwgError(403, 'Invalid security token');
+  }
+
   $name = $params['typetag_name'];
   $color = '#' . $params['typetag_color'];
 

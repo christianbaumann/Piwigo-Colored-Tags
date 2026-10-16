@@ -214,6 +214,7 @@ function APIUpdateColorsTags(tagIds, typeId) {
                 method: 'typetags.tags.setType',
                 tag_id: tagIds,
                 typetag_id: typeId,
+                pwg_token: pwg_token,
             },
             success: function (data) {
                 res(data);
@@ -230,12 +231,13 @@ function APICreateColor(name, color) {
     return new Promise((res, rej) => {
         jQuery.ajax({
             url: 'ws.php?format=json',
-            type: 'GET',
+            type: 'POST',
             dataType: 'json',
             data: {
                 method: 'typetags.type.add',
                 typetag_name: name,
                 typetag_color: color,
+                pwg_token: pwg_token,
             },
             success: function (data) {
                 res(data);
