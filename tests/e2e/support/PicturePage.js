@@ -1,4 +1,5 @@
 // @ts-check
+const { corruptNextCall, abortNextCall } = require('./wsRoutes');
 
 /**
  * Page object for picture.php with the colored-tag assignment UI on it.
@@ -71,6 +72,50 @@ class PicturePage {
     );
     await this.addBadge(tagId).click();
     return (await answer).json();
+  }
+
+  /**
+   * Clicks a remove button and returns the answer of typetags.image.removeTag.
+   *
+   * @param {number|string} tagId
+   * @returns {Promise<import('@playwright/test').Response>}
+   */
+  async clickRemoveButton(tagId) {
+    const answer = this.page.waitForResponse(
+      (r) => r.url().includes('ws.php') && (r.request().postData() || '').includes('typetags.image.removeTag')
+    );
+    await this.removeButton(tagId).click();
+    return answer;
+  }
+
+  /**
+   * The next call of a ws method goes out with one field replaced, so the real
+   * server refuses it for a reason of its own.
+   *
+   * @param {string} method @param {string} field @param {string} value
+   */
+  async corruptNextCall(method, field, value) {
+    await corruptNextCall(this.page, method, field, value);
+  }
+
+  /** Drops the next call of a ws method, as a lost connection would. @param {string} method */
+  async abortNextCall(method) {
+    await abortNextCall(this.page, method);
+  }
+
+  /** Ends the session, as an expired one would: the next call arrives as a guest's. */
+  async endSession() {
+    await this.page.context().clearCookies();
+  }
+
+  /**
+   * A message the page holds for a failure without a server reason, as the
+   * server translated it: 'not-saved' or 'session-expired'.
+   *
+   * @param {'not-saved'|'session-expired'} kind
+   */
+  async failureText(kind) {
+    return this.newTagError.getAttribute(`data-${kind}`);
   }
 
   /** @param {number} tagId */

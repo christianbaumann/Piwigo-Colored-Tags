@@ -98,6 +98,7 @@ $('#TypetagsValidate').click(() => {
     if ($('#TypetagsValidate.loading, #TypetagsValidate.disabled').length == 1) return;
 
     $('#TypetagsValidate').addClass('loading');
+    $('.typetags-actions .typetag-message, .typetags-actions .typetag-error').hide();
     const selectedTypeId = parseInt($('.color-option-container input:checked').val());
     const promises = [];
     const nbSlice = 996;
@@ -113,7 +114,11 @@ $('#TypetagsValidate').click(() => {
     }
 
     Promise.all(promises)
-    .then(() => {
+    .then(answers => {
+        // a PwgError below HTTP 400 arrives as a success with stat "fail"
+        const failed = answers.find(answer => !answer || answer.stat != 'ok');
+        if (failed !== undefined) throw failed;
+
         $('.typetags-actions .typetag-message').show();
         // change tagColor
         let typeTag = {
@@ -133,8 +138,20 @@ $('#TypetagsValidate').click(() => {
 
         typetagsHasValidate = true;
     })
-    .catch(e => console.error(e));
+    .catch(failure => {
+        $('#TypetagsValidate').removeClass('loading');
+        $('.typetags-actions .typetag-message').hide();
+        $('.typetags-actions .typetag-error').text(typetagsFailureReason(failure)).show();
+    });
 });
+
+// Why a colour save failed: a lost session, the reason the server gave, or that it was not saved.
+// `failure` is a jqXHR (HTTP error, lost connection) or an answer with stat "fail".
+function typetagsFailureReason(failure) {
+    if (failure && failure.status === 401) return str_session_expired;
+    const answer = (failure && failure.responseJSON) || failure;
+    return (answer && answer.message) || str_color_not_saved;
+}
 
 $('#TypetagsCreate').click(() => {
     APICreateColor(
@@ -160,7 +177,10 @@ $('#TypetagsCreate').click(() => {
             $('.typetags-create-actions .typetag-error').show();
         }
     })
-    .catch(e => console.error(e));
+    .catch(failure => {
+        $('.typetags-create-actions .typetag-message').hide();
+        $('.typetags-create-actions .typetag-error').text(typetagsFailureReason(failure)).show();
+    });
 })
 
 function addColorOption(typetag) {

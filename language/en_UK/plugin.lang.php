@@ -27,5 +27,6 @@ $lang['Emoji'] = 'Emoji';
 $lang['paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none'] = 'paste an emoji or type code points, e.g. 1F5BC FE0F; empty for none';
 $lang['Tag groups'] = 'Tag groups';
 $lang['No visible tag'] = 'No visible tag';
+$lang['The color was not saved'] = 'The color was not saved';
 
 ?>

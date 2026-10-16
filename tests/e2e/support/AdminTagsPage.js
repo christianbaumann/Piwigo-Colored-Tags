@@ -1,4 +1,5 @@
 // @ts-check
+const { corruptNextCall } = require('./wsRoutes');
 
 /**
  * The tag administration screen, as far as this plugin reaches into it.
@@ -68,6 +69,24 @@ class AdminTagsPage {
   /** Pick a group in the open colour panel; 'n' is "Remove color". */
   async chooseColor(/** @type {number|string} */ id) {
     await this.colorOption(id).locator('label').click();
+  }
+
+  /**
+   * The next call of a ws method goes out with one field replaced, so the real
+   * server refuses it for a reason of its own.
+   *
+   * @param {string} method @param {string} field @param {string} value
+   */
+  async corruptNextCall(method, field, value) {
+    await corruptNextCall(this.page, method, field, value);
+  }
+
+  /** Press "Schlagwort-Farben festlegen" and return the answer of typetags.tags.setType. */
+  async validateColorAnswer() {
+    const answer = this.page.waitForResponse(
+      (r) => r.url().includes('ws.php') && (r.request().postData() || '').includes('typetags.tags.setType'));
+    await this.validateButton.click();
+    return (await answer).json();
   }
 
   /** Press "Schlagwort-Farben festlegen". */

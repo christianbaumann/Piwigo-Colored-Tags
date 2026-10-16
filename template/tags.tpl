@@ -19,6 +19,8 @@
   const str_name_used = "{'This name is already used'|translate|escape:javascript}";
   const str_invalid_color = "{'Invalid color'|translate|escape:javascript}";
   const str_missing_field = "{'You must fill all fields (name and color)'|translate|escape:javascript}";
+  const str_color_not_saved = "{'The color was not saved'|translate|escape:javascript}";
+  const str_session_expired = "{'Session expired - please sign in again'|translate|escape:javascript}";
 
 </script>
 

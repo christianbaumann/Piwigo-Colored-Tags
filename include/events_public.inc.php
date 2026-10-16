@@ -193,7 +193,7 @@ function typetags_picture_prefilter($content)
 <form id="typetags-new-tag" style="margin:8px 0;">
   <input type="text" name="tag_name" placeholder="{\'Type a new tag\'|@translate}" aria-label="{\'Type a new tag\'|@translate}">
   <button type="submit">{\'Add the tag\'|@translate}</button>
-  <span class="typetags-new-tag-error" style="color:#c00;margin-left:8px;" hidden></span>
+  <span class="typetags-new-tag-error" style="color:#c00;margin-left:8px;" data-not-saved="{\'The tag was not saved\'|@translate|escape:html}" data-session-expired="{\'Session expired - please sign in again\'|@translate|escape:html}" hidden></span>
   <span class="typetags-tag-warning" style="color:#c00;margin-left:8px;" hidden></span>
 </form>
 {/if}
@@ -259,11 +259,27 @@ function typetags_picture_prefilter($content)
   // (photoinfo) says when that write failed, and the next change clears it
   function showTagWrite(result) {ldelim}
     var warning = jQuery("#typetags-new-tag .typetags-tag-warning");
-    if (result && result.tags_written === false) {ldelim}
+    // tags_written false without a message: nothing changed, so nothing was to be written
+    if (result && result.tags_written === false && result.tags_message_l10n) {ldelim}
       warning.text(result.tags_message_l10n).prop("hidden", false);
     {rdelim} else {ldelim}
       warning.text("").prop("hidden", true);
     {rdelim}
+  {rdelim}
+
+  // Why a save failed: the reason the server gave, a lost session, or that it was not saved
+  function failureReason(xhr, data) {ldelim}
+    var error = jQuery("#typetags-new-tag .typetags-new-tag-error");
+    if (xhr && xhr.status === 401) {ldelim}
+      return error.attr("data-session-expired");
+    {rdelim}
+    var answer = data || (xhr && xhr.responseJSON);
+    return (answer && answer.message) || error.attr("data-not-saved");
+  {rdelim}
+
+  // A failed save of any of the three paths is reported beside the field; "" clears it
+  function showFailure(text) {ldelim}
+    jQuery("#typetags-new-tag .typetags-new-tag-error").text(text).prop("hidden", text === "");
   {rdelim}
 
   // Add "x" buttons inside assigned colored tag badges
@@ -295,6 +311,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
+          showFailure("");
           showTagWrite(data.result);
           appendToTagsRow(tagLink(tagId, String(tagName), tagStyle, tagEmoji));
 
@@ -307,13 +324,15 @@ function typetags_picture_prefilter($content)
             jQuery("#typetags-unassigned").hide();
           {rdelim}
         {rdelim} else {ldelim}
-          // PwgError arrives as HTTP 200 + stat:"fail", so it lands here, not in error()
+          // a failure answered with HTTP 200; the badge stays where it was
           el.css("pointer-events", "");
-          if (window.console) { console.warn("typetags: " + (data.message || "request failed")); }
+          showFailure(failureReason(null, data));
         {rdelim}
       {rdelim},
-      error: function() {ldelim}
+      error: function(xhr) {ldelim}
+        // an HTTP 4xx from PwgError, or a lost connection; the badge stays where it was
         el.css("pointer-events", "");
+        showFailure(failureReason(xhr));
       {rdelim}
     {rdelim});
   {rdelim});
@@ -337,6 +356,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
+          showFailure("");
           showTagWrite(data.result);
           // Find the tag link (x button is now inside it)
           var assignedLink = el.closest("a[data-tag-id]");
@@ -389,13 +409,15 @@ function typetags_picture_prefilter($content)
             jQuery("#Tags").hide();
           {rdelim}
         {rdelim} else {ldelim}
-          // PwgError arrives as HTTP 200 + stat:"fail", so it lands here, not in error()
+          // a failure answered with HTTP 200; the badge stays where it was
           el.css("pointer-events", "");
-          if (window.console) { console.warn("typetags: " + (data.message || "request failed")); }
+          showFailure(failureReason(null, data));
         {rdelim}
       {rdelim},
-      error: function() {ldelim}
+      error: function(xhr) {ldelim}
+        // an HTTP 4xx from PwgError, or a lost connection; the badge stays where it was
         el.css("pointer-events", "");
+        showFailure(failureReason(xhr));
       {rdelim}
     {rdelim});
   {rdelim});
@@ -406,7 +428,6 @@ function typetags_picture_prefilter($content)
     var form = jQuery(this);
     var field = form.find("input[name=tag_name]");
     var button = form.find("button");
-    var error = form.find(".typetags-new-tag-error");
     if (jQuery.trim(field.val()) === "") {ldelim}
       return;
     {rdelim}
@@ -425,8 +446,7 @@ function typetags_picture_prefilter($content)
       success: function(data) {ldelim}
         button.prop("disabled", false);
         if (data.stat !== "ok") {ldelim}
-          // PwgError arrives as HTTP 200 + stat:"fail", so it lands here, not in error()
-          error.text(data.message || "{\'The tag was not saved\'|@translate|escape:javascript}").prop("hidden", false);
+          showFailure(failureReason(null, data));
           return;
         {rdelim}
 
@@ -443,11 +463,11 @@ function typetags_picture_prefilter($content)
           {rdelim}
         {rdelim}
         field.val("");
-        error.text("").prop("hidden", true);
+        showFailure("");
       {rdelim},
-      error: function() {ldelim}
+      error: function(xhr) {ldelim}
         button.prop("disabled", false);
-        error.text("{\'The tag was not saved\'|@translate|escape:javascript}").prop("hidden", false);
+        showFailure(failureReason(xhr));
       {rdelim}
     {rdelim});
   {rdelim});

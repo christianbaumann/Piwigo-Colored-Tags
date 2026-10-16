@@ -78,13 +78,6 @@ test.describe('edge cases', () => {
     const fixture = seed('some-assigned');
     const tagId = fixture.unassigned[0];
 
-    const warnings = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'warning') {
-        warnings.push(msg.text());
-      }
-    });
-
     await page.route(WS_URL, async (route, request) => {
       if (isTypetagsCall(request)) {
         // PwgError is delivered as HTTP 200 with stat:"fail", so this lands in
@@ -109,7 +102,8 @@ test.describe('edge cases', () => {
       .poll(() => PicturePage.inlinePointerEvents(picture.addBadge(tagId)))
       .toBe('');
     await expect(picture.assignedTag(tagId)).toHaveCount(0);
-    await expect.poll(() => warnings.join('\n')).toContain('typetags: Invalid security token');
+    // the reason is shown beside the field, as a typed tag's is (task 10)
+    await expect(picture.newTagError).toHaveText('Invalid security token');
   });
 
   test('comma separators render between multiple assigned tags', async ({ page }) => {
