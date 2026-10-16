@@ -375,12 +375,7 @@ INSERT IGNORE INTO ' . IMAGE_TAG_TABLE . '
 ;';
   pwg_query($query);
 
-  // Invalidate tag count cache
-  $query = '
-UPDATE ' . USER_CACHE_TABLE . '
-  SET nb_available_tags = NULL
-;';
-  pwg_query($query);
+  typetags_invalidate_tag_lists();
 
   return true;
 }
@@ -445,11 +440,7 @@ INSERT IGNORE INTO ' . IMAGE_TAG_TABLE . '
 ;';
   pwg_query($query);
 
-  $query = '
-UPDATE ' . USER_CACHE_TABLE . '
-  SET nb_available_tags = NULL
-;';
-  pwg_query($query);
+  typetags_invalidate_tag_lists();
 
   $query = '
 SELECT name FROM ' . TAGS_TABLE . '
@@ -465,6 +456,17 @@ SELECT name FROM ' . TAGS_TABLE . '
       ),
     typetags_tag_badge($tag_id)
     );
+}
+
+/**
+ * After a tag write: every user's cached tag list is dropped, not only the
+ * count, since core keys the list by the user cache's update time
+ * (docs/agents/decisions/0071).
+ */
+function typetags_invalidate_tag_lists()
+{
+  include_once(PHPWG_ROOT_PATH . 'admin/include/functions.php');
+  invalidate_user_cache();
 }
 
 /**
@@ -615,12 +617,7 @@ DELETE FROM ' . IMAGE_TAG_TABLE . '
 ;';
   pwg_query($query);
 
-  // Invalidate tag count cache
-  $query = '
-UPDATE ' . USER_CACHE_TABLE . '
-  SET nb_available_tags = NULL
-;';
-  pwg_query($query);
+  typetags_invalidate_tag_lists();
 
   return true;
 }
