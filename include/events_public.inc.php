@@ -162,7 +162,9 @@ SELECT t.id, t.name, t.url_name, tt.color, tt.striped, tt.emoji
 
   $partition = typetags_partition_tags($all_colored, $assigned_ids);
   $unassigned = $partition['unassigned'];
-  $assigned_colored_ids = $partition['assigned_colored_ids'];
+  // A tag another plugin keeps on this photo gets no remove button (persons: a marked person's tag).
+  $fixed_ids = array_map('intval', trigger_change('typetags_fixed_tag_ids', array(), $image_id));
+  $assigned_colored_ids = array_values(array_diff($partition['assigned_colored_ids'], $fixed_ids));
 
   $template->assign(array(
     'TYPETAGS_UNASSIGNED' => $unassigned,
