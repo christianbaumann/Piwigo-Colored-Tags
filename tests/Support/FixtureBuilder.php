@@ -339,6 +339,36 @@ SELECT t.id
         }
     }
 
+    /**
+     * Brings an account's typed-tag creations of the last 24 hours to exactly
+     * $count, counting the ones it already has (other suites' runs leave some),
+     * and asserts the count the cap will see.
+     */
+    public function forceTypedTagCreationsToday(string $username, int $count): void
+    {
+        $existing = $this->typedTagCreationsToday($username);
+        if ($existing > $count)
+        {
+            throw new RuntimeException("$username already typed in $existing tags today, more than the $count a case starts from");
+        }
+        $this->seedTypedTagCreations($username, $count - $existing);
+        $now = $this->typedTagCreationsToday($username);
+        if ($now !== $count)
+        {
+            throw new RuntimeException("$username has $now typed-tag creations today, not $count");
+        }
+    }
+
+    /** What typetags_typed_tags_today() counts for an account. */
+    public function typedTagCreationsToday(string $username): int
+    {
+        return (int)$this->db->scalar(
+            "SELECT COUNT(*) FROM piwigo_activity a JOIN piwigo_users u ON u.id = a.performed_by"
+            . " WHERE u.username = '" . $this->db->escape($username) . "'"
+            . ' AND ' . typetags_typed_tags_condition()
+        );
+    }
+
     /** Links tags to a photo directly, for a case that starts from them. */
     public function givenAssigned(int $imageId, array $tagIds): void
     {

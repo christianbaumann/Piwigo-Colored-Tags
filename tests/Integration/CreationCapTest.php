@@ -44,7 +44,7 @@ final class CreationCapTest extends TestCase
     /** [BVA] The last tag of the allowance is created, and counted. */
     public function testTheLastTagOfTheDayIsCreated(): void
     {
-        $this->fixtures->seedTypedTagCreations(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY - 1);
+        $this->fixtures->forceTypedTagCreationsToday(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY - 1);
 
         $res = $this->addNewTag($this->typedName());
 
@@ -58,7 +58,7 @@ final class CreationCapTest extends TestCase
     /** [BVA] One more is refused, and no tag is created. */
     public function testOneMoreIsRefused(): void
     {
-        $this->fixtures->seedTypedTagCreations(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY);
+        $this->fixtures->forceTypedTagCreationsToday(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY);
 
         $res = $this->addNewTag($this->typedName());
 
@@ -75,7 +75,7 @@ final class CreationCapTest extends TestCase
     {
         $this->ws->logout();
         $this->ws->login(Config::username(), Config::password());
-        $this->fixtures->seedTypedTagCreations(Config::username(), TYPETAGS_NEW_TAGS_PER_DAY);
+        $this->fixtures->forceTypedTagCreationsToday(Config::username(), TYPETAGS_NEW_TAGS_PER_DAY);
 
         $res = $this->addNewTag($this->typedName());
 
@@ -88,7 +88,7 @@ final class CreationCapTest extends TestCase
     {
         $striped = $this->fixtures->createStripedGroup();
         $name = (string)$this->db->scalar('SELECT name FROM piwigo_tags WHERE id = ' . $striped['tag_id']);
-        $this->fixtures->seedTypedTagCreations(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY);
+        $this->fixtures->forceTypedTagCreationsToday(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY);
 
         $res = $this->addNewTag($name);
 
@@ -97,17 +97,19 @@ final class CreationCapTest extends TestCase
         $this->assertSame(array($striped['tag_id']), $this->fixtures->assignedTagIds($this->imageId));
     }
 
-    /** [BVA] Creations older than 24 hours no longer count. */
+    /** [BVA] Creations older than 24 hours no longer count: one short of the cap today, a new tag is still created. */
     public function testCreationsOlderThanADayDoNotCount(): void
     {
+        $this->fixtures->forceTypedTagCreationsToday(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY - 1);
         $this->fixtures->seedTypedTagCreations(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY, self::OUTSIDE_WINDOW_MINUTES);
 
         $this->assertSame('ok', $this->addNewTag($this->typedName())['json']['stat'] ?? null);
     }
 
-    /** [ECP] Another account's creations are its own. */
+    /** [ECP] Another account's creations are its own: one short of the cap, a new tag is still created. */
     public function testAnotherAccountsCreationsDoNotCount(): void
     {
+        $this->fixtures->forceTypedTagCreationsToday(Config::normalUsername(), TYPETAGS_NEW_TAGS_PER_DAY - 1);
         $this->fixtures->seedTypedTagCreations(Config::username(), TYPETAGS_NEW_TAGS_PER_DAY);
 
         $this->assertSame('ok', $this->addNewTag($this->typedName())['json']['stat'] ?? null);
