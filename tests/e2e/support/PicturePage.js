@@ -27,6 +27,7 @@ class PicturePage {
     this.newTagField = this.newTagForm.locator('input[name="tag_name"]');
     this.newTagButton = this.newTagForm.locator('button[type="submit"]');
     this.newTagError = this.newTagForm.locator('.typetags-new-tag-error');
+    this.rowStatus = this.newTagError;
     this.tagWarning = this.newTagForm.locator('.typetags-tag-warning');
     this.loginField = page.locator('input[name="username"]');
     this.markupInTagsRow = page.locator('#Tags dd b, #Tags dd i, #Tags dd script');

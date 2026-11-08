@@ -275,7 +275,7 @@ final class RoleMatrixTest extends TestCase
         $result = self::ok($res) ? (array)$res['json']['result'] : array();
 
         return array('content' => array(
-            'warning slot' => str_contains($page, 'class="typetags-tag-warning"'),
+            'warning slot' => str_contains($page, 'class="typetags-tag-warning '),
             'answer says not written' => ($result['tags_written'] ?? null) === false
                 and (string)($result['tags_message_l10n'] ?? '') !== '',
             ));

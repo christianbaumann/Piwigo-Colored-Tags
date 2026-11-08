@@ -195,8 +195,14 @@ function typetags_picture_prefilter($content)
 <form id="typetags-new-tag" style="margin:8px 0;">
   <input type="text" name="tag_name" placeholder="{\'Type a new tag\'|@translate}" aria-label="{\'Type a new tag\'|@translate}">
   <button type="submit">{\'Add the tag\'|@translate}</button>
-  <span class="typetags-new-tag-error" style="color:#c00;margin-left:8px;" data-not-saved="{\'The tag was not saved\'|@translate|escape:html}" data-session-expired="{\'Session expired - please sign in again\'|@translate|escape:html}" hidden></span>
-  <span class="typetags-tag-warning" style="color:#c00;margin-left:8px;" hidden></span>
+  <span class="typetags-new-tag-error pwg-row-status" role="status" aria-live="polite" data-not-saved="{\'The tag was not saved\'|@translate|escape:html}" data-session-expired="{\'Session expired - please sign in again\'|@translate|escape:html}" data-saving="{\'Saving the tag ...\'|@translate|escape:html}" data-saved="{\'Tag saved\'|@translate|escape:html}" data-dirty="{\'Tag not saved yet\'|@translate|escape:html}" data-failed="{\'Tag not saved\'|@translate|escape:html}" hidden></span>
+  <span class="typetags-tag-warning pwg-row-status pwg-row-status--error" hidden></span>
+  <style>
+    #typetags-new-tag .pwg-row-status {ldelim} margin-left:8px; {rdelim}
+    #typetags-new-tag .pwg-row-status--saving, #typetags-new-tag .pwg-row-status--dirty {ldelim} color:#777; {rdelim}
+    #typetags-new-tag .pwg-row-status--saved {ldelim} color:#2a7a2a; {rdelim}
+    #typetags-new-tag .pwg-row-status--error {ldelim} color:#c00; {rdelim}
+  </style>
 </form>
 {/if}
 ';
@@ -279,9 +285,30 @@ function typetags_picture_prefilter($content)
     return (answer && answer.message) || error.attr("data-not-saved");
   {rdelim}
 
-  // A failed save of any of the three paths is reported beside the field; "" clears it
-  function showFailure(text) {ldelim}
-    jQuery("#typetags-new-tag .typetags-new-tag-error").text(text).prop("hidden", text === "");
+  // The row status: one of saving, saved, dirty, error, or "" for none. It stays until the next change.
+  var STATES = ["saving", "saved", "dirty", "error"];
+  function setStatus(state, text) {ldelim}
+    var status = jQuery("#typetags-new-tag .typetags-new-tag-error");
+    jQuery.each(STATES, function(i, name) {ldelim}
+      status.removeClass("pwg-row-status--" + name);
+    {rdelim});
+    if (state !== "") {ldelim}
+      status.addClass("pwg-row-status--" + state);
+    {rdelim}
+    status.text(text).prop("hidden", state === "");
+  {rdelim}
+
+  function showSaving() {ldelim}
+    setStatus("saving", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-saving"));
+  {rdelim}
+
+  function showSaved() {ldelim}
+    setStatus("saved", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-saved"));
+  {rdelim}
+
+  // A failed save of any of the three paths is reported on the row with its reason
+  function showFailure(reason) {ldelim}
+    setStatus("error", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-failed") + ": " + reason);
   {rdelim}
 
   // Add "x" buttons inside assigned colored tag badges
@@ -300,6 +327,7 @@ function typetags_picture_prefilter($content)
     var tagStyle = el.data("tag-style");
     var tagEmoji = el.data("tag-emoji");
     el.css("pointer-events", "none");
+    showSaving();
 
     jQuery.ajax({ldelim}
       url: "ws.php?format=json",
@@ -313,7 +341,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
-          showFailure("");
+          showSaved();
           showTagWrite(data.result);
           appendToTagsRow(tagLink(tagId, String(tagName), tagStyle, tagEmoji));
 
@@ -345,6 +373,7 @@ function typetags_picture_prefilter($content)
     var el = jQuery(this);
     var tagId = el.data("tag-id");
     el.css("pointer-events", "none");
+    showSaving();
 
     jQuery.ajax({ldelim}
       url: "ws.php?format=json",
@@ -358,7 +387,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
-          showFailure("");
+          showSaved();
           showTagWrite(data.result);
           // Find the tag link (x button is now inside it)
           var assignedLink = el.closest("a[data-tag-id]");
@@ -434,6 +463,7 @@ function typetags_picture_prefilter($content)
       return;
     {rdelim}
     button.prop("disabled", true);
+    showSaving();
 
     jQuery.ajax({ldelim}
       url: "ws.php?format=json",
@@ -465,13 +495,25 @@ function typetags_picture_prefilter($content)
           {rdelim}
         {rdelim}
         field.val("");
-        showFailure("");
+        showSaved();
       {rdelim},
       error: function(xhr) {ldelim}
         button.prop("disabled", false);
         showFailure(failureReason(xhr));
       {rdelim}
     {rdelim});
+  {rdelim});
+
+  // Typed but not sent: the row says so until the tag is saved
+  jQuery("#typetags-new-tag input[name=tag_name]").on("input", function() {ldelim}
+    var status = jQuery("#typetags-new-tag .typetags-new-tag-error");
+    if (jQuery.trim(jQuery(this).val()) === "") {ldelim}
+      if (status.hasClass("pwg-row-status--dirty")) {ldelim}
+        setStatus("", "");
+      {rdelim}
+    {rdelim} else {ldelim}
+      setStatus("dirty", status.attr("data-dirty"));
+    {rdelim}
   {rdelim});
 
   // Hover effect on unassigned tags

@@ -103,7 +103,7 @@ test.describe('edge cases', () => {
       .toBe('');
     await expect(picture.assignedTag(tagId)).toHaveCount(0);
     // the reason is shown beside the field, as a typed tag's is (task 10)
-    await expect(picture.newTagError).toHaveText('Invalid security token');
+    await expect(picture.newTagError).toHaveText('Nicht gespeichert: Invalid security token');
   });
 
   test('comma separators render between multiple assigned tags', async ({ page }) => {

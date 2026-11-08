@@ -22,6 +22,8 @@ const ROLES = [
   { role: 'admin', storageState: path.join(STATE, 'auth-admin.json') },
   { role: 'webmaster', storageState: path.join(STATE, 'auth.json') },
 ];
+const NOT_SAVED = 'Nicht gespeichert';
+const SAVED = '✓ Gespeichert';
 const MISSING_TAG = '999999999';
 
 for (const { role, storageState } of ROLES) {
@@ -51,7 +53,7 @@ for (const { role, storageState } of ROLES) {
       const added = await picture.clickAddBadge(addId);
       expect(added.stat).toBe('fail');
       await expect(picture.newTagError).toBeVisible();
-      await expect(picture.newTagError).toHaveText(added.message);
+      await expect(picture.newTagError).toHaveText(`${NOT_SAVED}: ${added.message}`);
       await expect(picture.addBadge(addId)).toHaveCount(1);
       await expect(picture.assignedTag(addId)).toHaveCount(0);
 
@@ -59,7 +61,7 @@ for (const { role, storageState } of ROLES) {
       await picture.corruptNextCall('typetags.image.removeTag', 'image_id', '0');
       const removed = await (await picture.clickRemoveButton(removeId)).json();
       expect(removed.stat).toBe('fail');
-      await expect(picture.newTagError).toHaveText(removed.message);
+      await expect(picture.newTagError).toHaveText(`${NOT_SAVED}: ${removed.message}`);
       await expect(picture.assignedTag(removeId)).toHaveCount(1);
       await expect(picture.addBadge(removeId)).toHaveCount(0);
       expect(await picture.assignedTagIds()).toEqual(before);
@@ -68,10 +70,10 @@ for (const { role, storageState } of ROLES) {
       await picture.reload();
       expect(await picture.assignedTagIds()).toEqual(before);
 
-      // and the next save goes through and clears the message
+      // and the next save goes through and replaces the message
       await picture.clickAddBadge(addId);
       await expect(picture.assignedTag(addId)).toHaveCount(1);
-      await expect(picture.newTagError).toBeHidden();
+      await expect(picture.newTagError).toHaveText(SAVED);
     });
   });
 }
@@ -94,7 +96,7 @@ test.describe('a + or x without an answer', () => {
     await picture.abortNextCall('typetags.image.removeTag');
     await picture.removeButton(removeId).click();
 
-    await expect(picture.newTagError).toHaveText(/** @type {string} */ (notSaved));
+    await expect(picture.newTagError).toHaveText(`${NOT_SAVED}: ${notSaved}`);
     await expect(picture.assignedTag(removeId)).toHaveCount(1);
   });
 
@@ -113,10 +115,10 @@ test.describe('a + or x without an answer', () => {
     await picture.endSession();
     const added = await picture.clickAddBadge(addId);
     expect(added.err).toBe(401);
-    await expect(picture.newTagError).toHaveText(/** @type {string} */ (expired));
+    await expect(picture.newTagError).toHaveText(`${NOT_SAVED}: ${expired}`);
     await expect(picture.addBadge(addId)).toHaveCount(1);
 
     await picture.addNewTag('_test_e2e_expired');
-    await expect(picture.newTagError).toHaveText(/** @type {string} */ (expired));
+    await expect(picture.newTagError).toHaveText(`${NOT_SAVED}: ${expired}`);
   });
 });
