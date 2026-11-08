@@ -77,6 +77,9 @@ test.describe('the Schlagwörter row status', () => {
     expect(answer.result.tags_written).toBe(false);
     await expect(picture.tagWarning).toHaveText(answer.result.tags_message_l10n);
     await expect(picture.tagWarning).toHaveClass(/pwg-row-status--error/);
+    // one red status only: no green text beside it
+    await expect(picture.rowStatus).toBeHidden();
+    await expect(picture.rowStatus).not.toHaveText(SAVED);
     // stays: nothing clears it while the page is idle
     await page.waitForTimeout(1500);
     await expect(picture.tagWarning).toBeVisible();
@@ -84,5 +87,6 @@ test.describe('the Schlagwörter row status', () => {
     // the next change answers again and shows its own result
     const second = await picture.clickAddBadge(ids[1]);
     await expect(picture.tagWarning).toHaveText(second.result.tags_message_l10n);
+    await expect(picture.rowStatus).toBeHidden();
   });
 });

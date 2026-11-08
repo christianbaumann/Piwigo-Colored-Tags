@@ -268,7 +268,7 @@ function typetags_picture_prefilter($content)
   function showTagWrite(result) {ldelim}
     var warning = jQuery("#typetags-new-tag .typetags-tag-warning");
     // tags_written false without a message: nothing changed, so nothing was to be written
-    if (result && result.tags_written === false && result.tags_message_l10n) {ldelim}
+    if (writeFailed(result)) {ldelim}
       warning.text(result.tags_message_l10n).prop("hidden", false);
     {rdelim} else {ldelim}
       warning.text("").prop("hidden", true);
@@ -302,7 +302,16 @@ function typetags_picture_prefilter($content)
     setStatus("saving", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-saving"));
   {rdelim}
 
-  function showSaved() {ldelim}
+  // The green status gives way to the red write warning when the file write failed
+  function writeFailed(result) {ldelim}
+    return !!(result && result.tags_written === false && result.tags_message_l10n);
+  {rdelim}
+
+  function showSaved(result) {ldelim}
+    if (writeFailed(result)) {ldelim}
+      setStatus("", "");
+      return;
+    {rdelim}
     setStatus("saved", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-saved"));
   {rdelim}
 
@@ -341,7 +350,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
-          showSaved();
+          showSaved(data.result);
           showTagWrite(data.result);
           appendToTagsRow(tagLink(tagId, String(tagName), tagStyle, tagEmoji));
 
@@ -387,7 +396,7 @@ function typetags_picture_prefilter($content)
       dataType: "json",
       success: function(data) {ldelim}
         if (data.stat === "ok") {ldelim}
-          showSaved();
+          showSaved(data.result);
           showTagWrite(data.result);
           // Find the tag link (x button is now inside it)
           var assignedLink = el.closest("a[data-tag-id]");
@@ -495,7 +504,7 @@ function typetags_picture_prefilter($content)
           {rdelim}
         {rdelim}
         field.val("");
-        showSaved();
+        showSaved(tag);
       {rdelim},
       error: function(xhr) {ldelim}
         button.prop("disabled", false);
