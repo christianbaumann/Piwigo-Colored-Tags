@@ -195,7 +195,7 @@ function typetags_picture_prefilter($content)
 <form id="typetags-new-tag" style="margin:8px 0;">
   <input type="text" name="tag_name" placeholder="{\'Type a new tag\'|@translate}" aria-label="{\'Type a new tag\'|@translate}">
   <button type="submit">{\'Add the tag\'|@translate}</button>
-  <span class="typetags-new-tag-error pwg-row-status" role="status" aria-live="polite" data-not-saved="{\'The tag was not saved\'|@translate|escape:html}" data-session-expired="{\'Session expired - please sign in again\'|@translate|escape:html}" data-saving="{\'Saving the tag ...\'|@translate|escape:html}" data-saved="{\'Tag saved\'|@translate|escape:html}" data-dirty="{\'Tag not saved yet\'|@translate|escape:html}" data-failed="{\'Tag not saved\'|@translate|escape:html}" data-undo="{\'Undo\'|@translate|escape:html}" data-undone="{\'↶ Undone\'|@translate|escape:html}" hidden></span>
+  <span class="typetags-new-tag-error pwg-row-status" role="status" aria-live="polite" data-not-saved="{\'The tag was not saved\'|@translate|escape:html}" data-session-expired="{\'Session expired - please sign in again\'|@translate|escape:html}" data-saving="{\'Saving the tag ...\'|@translate|escape:html}" data-saved="{\'Tag saved\'|@translate|escape:html}" data-dirty="{\'Tag not saved yet\'|@translate|escape:html}" data-failed="{\'Tag not saved\'|@translate|escape:html}" data-undo="{\'Undo\'|@translate|escape:html}" data-undone="{\'↶ Undone\'|@translate|escape:html}" data-reload="{\'Reload the page to see the restored tag\'|@translate|escape:html}" hidden></span>
   <span class="typetags-tag-warning pwg-row-status pwg-row-status--error" hidden></span>
   <style>
     #typetags-new-tag .pwg-row-status {ldelim} margin-left:8px; {rdelim}
@@ -338,16 +338,22 @@ function typetags_picture_prefilter($content)
     {rdelim}
     var link = jQuery("#Tags dd a[data-tag-id=\'" + result.tag_id + "\']");
     var badge = jQuery(".typetag-add[data-tag-id=\'" + result.tag_id + "\']");
+    // true when the page shows the tag as it was and could be put back
+    var shown = true;
     if (result.present && badge.length) {ldelim}
       moveToAssigned(badge);
     {rdelim} else if (!result.present && link.length) {ldelim}
       moveToUnassigned(link, result.tag_id);
-    {rdelim} else if (result.present !== (link.length > 0)) {ldelim}
-      // this page never showed the tag: only a fresh page can
-      window.location.reload();
-      return;
+    {rdelim} else if (result.present && !link.length) {ldelim}
+      shown = false;
     {rdelim}
-    setStatus("undone", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-undone"));
+    var status = jQuery("#typetags-new-tag .typetags-new-tag-error");
+    // this page never showed the tag, so the row cannot put it back: it says so instead of reloading
+    var text = status.attr("data-undone");
+    if (!shown) {ldelim}
+      text += " · " + status.attr("data-reload");
+    {rdelim}
+    setStatus("undone", text);
     showTagWrite(result);
   {rdelim});
 

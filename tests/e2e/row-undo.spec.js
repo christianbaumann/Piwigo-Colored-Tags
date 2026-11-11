@@ -110,6 +110,26 @@ test.describe('Rückgängig on the Schlagwörter row', () => {
     await expect(picture.assignedTag(tagId)).toHaveCount(1);
   });
 
+  test('[ERR] a restored tag the page never showed is not reloaded in: the row says to reload', async ({ page }) => {
+    const fixture = seed('some-assigned');
+    const picture = new PicturePage(page);
+    await picture.gotoFixture(fixture);
+    await page.evaluate(() => { window.__notReloaded = true; });
+    const tagId = Number(await picture.removeButtons.first().getAttribute('data-tag-id'));
+    await picture.clickRemoveButton(tagId);
+    await expect(picture.rowStatus).toHaveText(SAVED_WITH_UNDO);
+    // forced: the page has no + badge for the tag, as when another tab removed it from the list
+    await picture.addBadge(tagId).evaluate((el) => el.remove());
+    await expect(picture.addBadge(tagId)).toHaveCount(0);
+
+    await picture.rowUndo.click();
+
+    await expect(picture.rowStatus).toContainText(UNDONE);
+    await expect(picture.rowStatus).toContainText('Seite neu laden, um das wiederhergestellte Schlagwort zu sehen');
+    await expect(picture.assignedTag(tagId)).toHaveCount(0);
+    expect(await page.evaluate(() => window.__notReloaded)).toBe(true);
+  });
+
   test('[NEG] an answer without a history entry shows "Gespeichert" and no Rückgängig', async ({ page }) => {
     const fixture = seed('some-assigned');
     const picture = new PicturePage(page);
