@@ -1,7 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { PicturePage } = require('./support/PicturePage');
-const { seed, restore } = require('./support/seed');
+const { seed, restore, trackTag } = require('./support/seed');
 
 /**
  * The Schlagwörter row's save status (task 11, design "every step saves
@@ -63,6 +63,8 @@ test.describe('the Schlagwörter row status', () => {
     await picture.newTagField.press('Enter');
     const result = await (await answer).json();
     expect(result.stat).toBe('ok');
+    // recorded so restore() deletes the tag this case created
+    trackTag('_test_e2e_status');
     await expect(picture.rowStatus).toHaveText(SAVED);
     await expect(picture.newTagField).toHaveValue('');
   });
