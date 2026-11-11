@@ -9,7 +9,8 @@ const { seed, restore } = require('./support/seed');
  * plugins that render a row status.
  */
 const SAVING = 'Speichert …';
-const SAVED = '✓ Gespeichert';
+/** The saved status; a save that wrote a history entry also offers Rückgängig. */
+const SAVED = /^✓ Gespeichert( · Rückgängig)?$/;
 const DIRTY = 'noch nicht gespeichert';
 
 test.describe('the Schlagwörter row status', () => {

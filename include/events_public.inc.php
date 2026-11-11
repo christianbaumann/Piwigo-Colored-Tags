@@ -195,11 +195,12 @@ function typetags_picture_prefilter($content)
 <form id="typetags-new-tag" style="margin:8px 0;">
   <input type="text" name="tag_name" placeholder="{\'Type a new tag\'|@translate}" aria-label="{\'Type a new tag\'|@translate}">
   <button type="submit">{\'Add the tag\'|@translate}</button>
-  <span class="typetags-new-tag-error pwg-row-status" role="status" aria-live="polite" data-not-saved="{\'The tag was not saved\'|@translate|escape:html}" data-session-expired="{\'Session expired - please sign in again\'|@translate|escape:html}" data-saving="{\'Saving the tag ...\'|@translate|escape:html}" data-saved="{\'Tag saved\'|@translate|escape:html}" data-dirty="{\'Tag not saved yet\'|@translate|escape:html}" data-failed="{\'Tag not saved\'|@translate|escape:html}" hidden></span>
+  <span class="typetags-new-tag-error pwg-row-status" role="status" aria-live="polite" data-not-saved="{\'The tag was not saved\'|@translate|escape:html}" data-session-expired="{\'Session expired - please sign in again\'|@translate|escape:html}" data-saving="{\'Saving the tag ...\'|@translate|escape:html}" data-saved="{\'Tag saved\'|@translate|escape:html}" data-dirty="{\'Tag not saved yet\'|@translate|escape:html}" data-failed="{\'Tag not saved\'|@translate|escape:html}" data-undo="{\'Undo\'|@translate|escape:html}" data-undone="{\'↶ Undone\'|@translate|escape:html}" hidden></span>
   <span class="typetags-tag-warning pwg-row-status pwg-row-status--error" hidden></span>
   <style>
     #typetags-new-tag .pwg-row-status {ldelim} margin-left:8px; {rdelim}
-    #typetags-new-tag .pwg-row-status--saving, #typetags-new-tag .pwg-row-status--dirty {ldelim} color:#777; {rdelim}
+    #typetags-new-tag .pwg-row-status--saving, #typetags-new-tag .pwg-row-status--dirty, #typetags-new-tag .pwg-row-status--undone {ldelim} color:#777; {rdelim}
+    #typetags-new-tag .pwg-row-undo {ldelim} margin:0; padding:0; border:0; background:none; color:inherit; font:inherit; text-decoration:underline; cursor:pointer; {rdelim}
     #typetags-new-tag .pwg-row-status--saved {ldelim} color:#2a7a2a; {rdelim}
     #typetags-new-tag .pwg-row-status--error {ldelim} color:#c00; {rdelim}
   </style>
@@ -286,8 +287,9 @@ function typetags_picture_prefilter($content)
   {rdelim}
 
   // The row status: one of saving, saved, dirty, error, or "" for none. It stays until the next change.
-  var STATES = ["saving", "saved", "dirty", "error"];
-  function setStatus(state, text) {ldelim}
+  // A save that returned a history entry id offers Undo beside the text.
+  var STATES = ["saving", "saved", "dirty", "error", "undone"];
+  function setStatus(state, text, historyId) {ldelim}
     var status = jQuery("#typetags-new-tag .typetags-new-tag-error");
     jQuery.each(STATES, function(i, name) {ldelim}
       status.removeClass("pwg-row-status--" + name);
@@ -296,7 +298,58 @@ function typetags_picture_prefilter($content)
       status.addClass("pwg-row-status--" + state);
     {rdelim}
     status.text(text).prop("hidden", state === "");
+    if (historyId) {ldelim}
+      var button = jQuery(\'<button type="button" class="pwg-row-undo"></button>\').text(status.attr("data-undo"));
+      button.on("click", function() {ldelim} undo(button, historyId); {rdelim});
+      status.append(" · ", button);
+    {rdelim}
   {rdelim}
+
+  // The first entry of the answer: a tag change writes one. Without photoinfo there is none.
+  function historyIdOf(result) {ldelim}
+    return result && jQuery.isArray(result.history_ids) && result.history_ids.length > 0 ? result.history_ids[0] : null;
+  {rdelim}
+
+  function undo(button, historyId) {ldelim}
+    button.prop("disabled", true);
+    jQuery.ajax({ldelim}
+      url: "ws.php?format=json",
+      type: "POST",
+      data: {ldelim} method: "pwg.photoinfo.undo", history_id: historyId, pwg_token: pwgToken {rdelim},
+      dataType: "json",
+      success: function(data) {ldelim}
+        if (data.stat === "ok") {ldelim}
+          document.dispatchEvent(new CustomEvent("photoinfo:undone", {ldelim} detail: data.result {rdelim}));
+        {rdelim} else {ldelim}
+          setStatus("error", data.message);
+        {rdelim}
+      {rdelim},
+      error: function(xhr) {ldelim}
+        setStatus("error", failureReason(xhr));
+      {rdelim}
+    {rdelim});
+  {rdelim}
+
+  // An undo, started here or in the change list: the tag goes back where it was
+  document.addEventListener("photoinfo:undone", function(event) {ldelim}
+    var result = event.detail;
+    if (result.field !== "tag" || String(result.image_id) !== String(imageId)) {ldelim}
+      return;
+    {rdelim}
+    var link = jQuery("#Tags dd a[data-tag-id=\'" + result.tag_id + "\']");
+    var badge = jQuery(".typetag-add[data-tag-id=\'" + result.tag_id + "\']");
+    if (result.present && badge.length) {ldelim}
+      moveToAssigned(badge);
+    {rdelim} else if (!result.present && link.length) {ldelim}
+      moveToUnassigned(link, result.tag_id);
+    {rdelim} else if (result.present !== (link.length > 0)) {ldelim}
+      // this page never showed the tag: only a fresh page can
+      window.location.reload();
+      return;
+    {rdelim}
+    setStatus("undone", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-undone"));
+    showTagWrite(result);
+  {rdelim});
 
   function showSaving() {ldelim}
     setStatus("saving", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-saving"));
@@ -312,12 +365,82 @@ function typetags_picture_prefilter($content)
       setStatus("", "");
       return;
     {rdelim}
-    setStatus("saved", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-saved"));
+    setStatus("saved", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-saved"), historyIdOf(result));
   {rdelim}
 
   // A failed save of any of the three paths is reported on the row with its reason
   function showFailure(reason) {ldelim}
     setStatus("error", jQuery("#typetags-new-tag .typetags-new-tag-error").attr("data-failed") + ": " + reason);
+  {rdelim}
+
+  // A tag of the Tags row goes back to the unassigned list as a + badge
+  function moveToUnassigned(assignedLink, tagId) {ldelim}
+    var tagName = "";
+    var tagStyle = "";
+    var tagEmoji = "";
+
+    // The style of the badge span is the badge style; the emoji is its own element
+    var badgeSpan = assignedLink.find("span[style]").first();
+    if (badgeSpan.length) {ldelim}
+      tagName = badgeSpan.clone().children().remove().end().text().trim();
+      tagStyle = badgeSpan.attr("style");
+      tagEmoji = badgeSpan.children(".typetag-emoji").html() || "";
+    {rdelim}
+
+    // Remove separator (", " before or after)
+    var prev = assignedLink[0].previousSibling;
+    var next = assignedLink[0].nextSibling;
+    if (next && next.nodeType === 3 && next.textContent.trim() === ",") {ldelim}
+      next.remove();
+    {rdelim} else if (prev && prev.nodeType === 3 && prev.textContent.match(/,\s*$/)) {ldelim}
+      prev.textContent = prev.textContent.replace(/,\s*$/, "");
+    {rdelim}
+
+    assignedLink.remove();
+
+    // Remove from assigned list
+    var idx = assignedColoredIds.indexOf(tagId);
+    if (idx !== -1) assignedColoredIds.splice(idx, 1);
+
+    // Add back to unassigned list
+    if (tagName && tagStyle) {ldelim}
+      var addBadge = badgeLabel(jQuery(\'<span class="typetag-badge typetag-add" title="{\'Add tag\'|@translate}">+ </span>\').attr({ldelim}
+        "data-tag-id": tagId,
+        "data-tag-name": tagName,
+        "data-tag-style": tagStyle,
+        "data-tag-emoji": tagEmoji,
+        style: tagStyle + "cursor:pointer;opacity:0.6;margin:2px;"
+      {rdelim}), tagName, tagEmoji);
+      var container = jQuery("#typetags-unassigned");
+      if (container.length === 0) {ldelim}
+        container = jQuery(\'<div id="typetags-unassigned" style="margin:8px 0;line-height:2.2;"></div>\');
+        jQuery("dl#standard").after(container);
+      {rdelim}
+      container.append(addBadge).show();
+    {rdelim}
+
+    // Hide Tags row if empty
+    if (jQuery("#Tags dd").children("a").length === 0) {ldelim}
+      jQuery("#Tags").hide();
+    {rdelim}
+  {rdelim}
+
+  // A + badge of the unassigned list becomes a tag of the Tags row
+  function moveToAssigned(el) {ldelim}
+    var tagId = el.data("tag-id");
+    var tagName = el.data("tag-name");
+    var tagStyle = el.data("tag-style");
+    var tagEmoji = el.data("tag-emoji");
+    appendToTagsRow(tagLink(tagId, String(tagName), tagStyle, tagEmoji));
+
+    // Remove from unassigned list
+    el.remove();
+    assignedColoredIds.push(tagId);
+
+    // Hide unassigned section if empty
+    if (jQuery("#typetags-unassigned .typetag-add").length === 0) {ldelim}
+      jQuery("#typetags-unassigned").hide();
+    {rdelim}
   {rdelim}
 
   // Add "x" buttons inside assigned colored tag badges
@@ -332,9 +455,6 @@ function typetags_picture_prefilter($content)
   jQuery(document).on("click", ".typetag-add", function() {ldelim}
     var el = jQuery(this);
     var tagId = el.data("tag-id");
-    var tagName = el.data("tag-name");
-    var tagStyle = el.data("tag-style");
-    var tagEmoji = el.data("tag-emoji");
     el.css("pointer-events", "none");
     showSaving();
 
@@ -352,16 +472,7 @@ function typetags_picture_prefilter($content)
         if (data.stat === "ok") {ldelim}
           showSaved(data.result);
           showTagWrite(data.result);
-          appendToTagsRow(tagLink(tagId, String(tagName), tagStyle, tagEmoji));
-
-          // Remove from unassigned list
-          el.remove();
-          assignedColoredIds.push(tagId);
-
-          // Hide unassigned section if empty
-          if (jQuery("#typetags-unassigned .typetag-add").length === 0) {ldelim}
-            jQuery("#typetags-unassigned").hide();
-          {rdelim}
+          moveToAssigned(el);
         {rdelim} else {ldelim}
           // a failure answered with HTTP 200; the badge stays where it was
           el.css("pointer-events", "");
@@ -398,56 +509,7 @@ function typetags_picture_prefilter($content)
         if (data.stat === "ok") {ldelim}
           showSaved(data.result);
           showTagWrite(data.result);
-          // Find the tag link (x button is now inside it)
-          var assignedLink = el.closest("a[data-tag-id]");
-          var tagName = "";
-          var tagStyle = "";
-          var tagEmoji = "";
-
-          // The style of the badge span is the badge style; the emoji is its own element
-          var badgeSpan = assignedLink.find("span[style]").first();
-          if (badgeSpan.length) {ldelim}
-            tagName = badgeSpan.clone().children().remove().end().text().trim();
-            tagStyle = badgeSpan.attr("style");
-            tagEmoji = badgeSpan.children(".typetag-emoji").html() || "";
-          {rdelim}
-
-          // Remove separator (", " before or after)
-          var prev = assignedLink[0].previousSibling;
-          var next = assignedLink[0].nextSibling;
-          if (next && next.nodeType === 3 && next.textContent.trim() === ",") {ldelim}
-            next.remove();
-          {rdelim} else if (prev && prev.nodeType === 3 && prev.textContent.match(/,\s*$/)) {ldelim}
-            prev.textContent = prev.textContent.replace(/,\s*$/, "");
-          {rdelim}
-
-          assignedLink.remove();
-
-          // Remove from assigned list
-          var idx = assignedColoredIds.indexOf(tagId);
-          if (idx !== -1) assignedColoredIds.splice(idx, 1);
-
-          // Add back to unassigned list
-          if (tagName && tagStyle) {ldelim}
-            var addBadge = badgeLabel(jQuery(\'<span class="typetag-badge typetag-add" title="{\'Add tag\'|@translate}">+ </span>\').attr({ldelim}
-              "data-tag-id": tagId,
-              "data-tag-name": tagName,
-              "data-tag-style": tagStyle,
-              "data-tag-emoji": tagEmoji,
-              style: tagStyle + "cursor:pointer;opacity:0.6;margin:2px;"
-            {rdelim}), tagName, tagEmoji);
-            var container = jQuery("#typetags-unassigned");
-            if (container.length === 0) {ldelim}
-              container = jQuery(\'<div id="typetags-unassigned" style="margin:8px 0;line-height:2.2;"></div>\');
-              jQuery("dl#standard").after(container);
-            {rdelim}
-            container.append(addBadge).show();
-          {rdelim}
-
-          // Hide Tags row if empty
-          if (jQuery("#Tags dd").children("a").length === 0) {ldelim}
-            jQuery("#Tags").hide();
-          {rdelim}
+          moveToUnassigned(el.closest("a[data-tag-id]"), tagId);
         {rdelim} else {ldelim}
           // a failure answered with HTTP 200; the badge stays where it was
           el.css("pointer-events", "");

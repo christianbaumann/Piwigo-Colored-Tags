@@ -23,7 +23,7 @@ const ROLES = [
   { role: 'webmaster', storageState: path.join(STATE, 'auth.json') },
 ];
 const NOT_SAVED = 'Nicht gespeichert';
-const SAVED = '✓ Gespeichert';
+const SAVED = /^✓ Gespeichert( · Rückgängig)?$/;
 const MISSING_TAG = '999999999';
 
 for (const { role, storageState } of ROLES) {

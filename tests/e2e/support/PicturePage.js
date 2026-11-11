@@ -29,6 +29,10 @@ class PicturePage {
     this.newTagError = this.newTagForm.locator('.typetags-new-tag-error');
     this.rowStatus = this.newTagError;
     this.tagWarning = this.newTagForm.locator('.typetags-tag-warning');
+    this.rowUndo = this.newTagError.locator('.pwg-row-undo');
+    // photoinfo's change list, when that plugin is active
+    this.historySummary = page.locator('#photoinfo-history > summary');
+    this.historyEntries = page.locator('#photoinfo-history-list li');
     this.loginField = page.locator('input[name="username"]');
     this.markupInTagsRow = page.locator('#Tags dd b, #Tags dd i, #Tags dd script');
   }
@@ -117,6 +121,20 @@ class PicturePage {
    */
   async failureText(kind) {
     return this.newTagError.getAttribute(`data-${kind}`);
+  }
+
+  /**
+   * Calls a web-service method as the signed-in account, the way another tab would, with the token
+   * photoinfo's Info form carries.
+   *
+   * @param {Record<string, string>} params
+   */
+  async callWs(params) {
+    await this.page.evaluate(async (fields) => {
+      const token = document.querySelector('#photoinfo-info-form').dataset.token;
+      const body = new URLSearchParams({ ...fields, pwg_token: token });
+      await fetch('ws.php?format=json', { method: 'POST', body, credentials: 'same-origin' });
+    }, params);
   }
 
   /** @param {number} tagId */

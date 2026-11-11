@@ -37,7 +37,7 @@ test.describe('a normal account types a new tag', () => {
     await expect(picture.assignedTag(tag.tag_id)).toHaveCount(1);
     await expect(picture.assignedTags).toHaveCount(before + 1);
     await expect(picture.newTagField).toHaveValue('');
-    await expect(picture.rowStatus).toHaveText('✓ Gespeichert');
+    await expect(picture.rowStatus).toHaveText(/^✓ Gespeichert( · Rückgängig)?$/);
   });
 
   test('a typed name with markup shows as text', async ({ page }) => {
